@@ -1,6 +1,4 @@
 #include "atomic_ruby.h"
-#include <stdlib.h>
-#include <string.h>
 
 typedef struct {
   volatile VALUE value;
