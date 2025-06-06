@@ -79,6 +79,10 @@ r3 = Benchmark.measure do
   balances << account.balance
 end
 
+puts "ruby version:            #{RUBY_DESCRIPTION}"
+puts "concurrent-ruby version: #{Concurrent::VERSION}"
+puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
+puts "\n"
 puts "Balances:"
 puts "Synchronized Bank Account Balance:           #{balances[0]}"
 puts "Concurrent Ruby Atomic Bank Account Balance: #{balances[1]}"
