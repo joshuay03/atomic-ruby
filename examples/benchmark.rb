@@ -14,9 +14,8 @@ class AtomicRubyAtomicBankAccount
   end
 
   def deposit(amount)
-    @balance.swap { |current| current + amount }
     sleep(rand(0.1..0.2))
-    @balance.value
+    @balance.swap { |current| current + amount }
   end
 end
 
@@ -30,9 +29,8 @@ class ConcurrentRubyAtomicBankAccount
   end
 
   def deposit(amount)
-    @balance.swap { |current| current + amount }
     sleep(rand(0.1..0.2))
-    @balance.value
+    @balance.swap { |current| current + amount }
   end
 end
 
@@ -45,11 +43,10 @@ class SynchronizedBankAccount
   end
 
   def deposit(amount)
+    sleep(rand(0.1..0.2))
     @mutex.synchronize do
       @balance += amount
     end
-    sleep(rand(0.1..0.2))
-    @balance
   end
 end
 

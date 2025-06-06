@@ -48,9 +48,8 @@ class AtomicRubyAtomicBankAccount
   end
 
   def deposit(amount)
-    @balance.swap { |current| current + amount }
     sleep(rand(0.1..0.2))
-    @balance.value
+    @balance.swap { |current| current + amount }
   end
 end
 
@@ -64,9 +63,8 @@ class ConcurrentRubyAtomicBankAccount
   end
 
   def deposit(amount)
-    @balance.swap { |current| current + amount }
     sleep(rand(0.1..0.2))
-    @balance.value
+    @balance.swap { |current| current + amount }
   end
 end
 
@@ -79,11 +77,10 @@ class SynchronizedBankAccount
   end
 
   def deposit(amount)
+    sleep(rand(0.1..0.2))
     @mutex.synchronize do
       @balance += amount
     end
-    sleep(rand(0.1..0.2))
-    @balance
   end
 end
 
@@ -141,9 +138,9 @@ Concurrent Ruby Atomic Bank Account Balance: 49995100
 Atomic Ruby Atomic Bank Account Balance:     49995100
 
 Benchmark Results:
-Synchronized Bank Account:           1.856895 seconds
-Concurrent Ruby Atomic Bank Account: 1.823103 seconds
-Atomic Ruby Atomic Bank Account:     1.75111 seconds
+Synchronized Bank Account:           1.900873 seconds
+Concurrent Ruby Atomic Bank Account: 1.840683 seconds
+Atomic Ruby Atomic Bank Account:     1.755343 seconds
 ```
 
 ## Development
