@@ -5,5 +5,7 @@ require "atomic-ruby"
 
 require "minitest/autorun"
 
-puts "\nEnabling GC stress mode...\n\n"
-GC.stress = true
+if ENV["CI"]
+  puts "\nEnabling GC stress mode...\n\n"
+  GC.stress = true
+end
