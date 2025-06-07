@@ -73,6 +73,6 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
 
   rb_define_alloc_func(rb_cAtom, rb_cAtom_allocate);
   rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
-  rb_define_method(rb_cAtom, "swap", rb_cAtom_swap, 0);
-  rb_define_method(rb_cAtom, "value", rb_cAtom_value, 0);
+  rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
+  rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
 }

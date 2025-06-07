@@ -5,5 +5,13 @@ module AtomicRuby
     def initialize(value)
       _initialize(value)
     end
+
+    def value
+      _value
+    end
+
+    def swap(&block)
+      _swap(&block)
+    end
   end
 end
