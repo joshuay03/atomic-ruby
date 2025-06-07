@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add `AtomicBoolean`
+
 ## [0.2.0] - 2025-06-07
 
 - Add `AtomicThreadPool`

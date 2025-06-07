@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "atom"
+require_relative "atomic_boolean"
 
 module AtomicRuby
   class AtomicThreadPool
@@ -12,7 +13,7 @@ module AtomicRuby
       @queue = Atom.new([])
       @threads = []
       @started_threads = Atom.new(0)
-      @stopping = Atom.new(false)
+      @stopping = AtomicBoolean.new(false)
 
       start
     end
@@ -22,7 +23,7 @@ module AtomicRuby
         raise UnsupportedWorkTypeError, "expected work to be a `Proc`, got #{work.class}"
       end
 
-      if @stopping.value
+      if @stopping.true?
         raise InvalidWorkQueueingError, "cannot queue work during or after pool shutdown"
       end
 
@@ -67,9 +68,9 @@ module AtomicRuby
                 puts err.backtrace.join("\n")
               end
             when :stop
-              @stopping.swap { true }
+              @stopping.make_true
             when NilClass
-              if @stopping.value
+              if @stopping.true?
                 break
               else
                 Thread.pass

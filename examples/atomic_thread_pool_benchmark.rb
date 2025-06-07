@@ -9,15 +9,15 @@ results = []
 2.times do |idx|
   result = Benchmark.measure do
     pool = case idx
-    when 0 then Concurrent::FixedThreadPool.new(5)
-    when 1 then AtomicRuby::AtomicThreadPool.new(size: 5)
+    when 0 then Concurrent::FixedThreadPool.new(20)
+    when 1 then AtomicRuby::AtomicThreadPool.new(size: 20)
     end
 
-    20.times do
+    100.times do
       pool << -> { sleep(0.25) }
     end
 
-    20.times do
+    100.times do
       pool << -> { 100_000.times.map(&:itself).sum }
     end
 

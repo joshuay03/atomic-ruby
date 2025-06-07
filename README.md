@@ -27,11 +27,26 @@ gem install atomic-ruby
 require "atomic-ruby"
 
 atom = AtomicRuby::Atom.new(0)
-p atom.value # => 0
+p atom.value #=> 0
 atom.swap { |current_value| current_value + 1 }
-p atom.value # => 1
+p atom.value #=> 1
 atom.swap { |current_value| current_value + 1 }
-p atom.value # => 2
+p atom.value #=> 2
+```
+
+`AtomicRuby::AtomicBoolean`:
+
+```ruby
+require "atomic-ruby"
+
+atom = AtomicRuby::AtomicBoolean.new(false)
+p atom.value  #=> false
+p atom.false? #=> true
+p atom.true?  #=> false
+atom.make_true
+p atom.true?  #=> true
+atom.toggle
+p atom.false? #=> true
 ```
 
 `AtomicRuby::AtomicThreadPool`:
@@ -126,7 +141,7 @@ end
 
 balances = []
 
-r1 = Benchmark.measure do
+result_1 = Benchmark.measure do
   account = SynchronizedBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -134,7 +149,7 @@ r1 = Benchmark.measure do
   balances << account.balance
 end
 
-r2 = Benchmark.measure do
+result_2 = Benchmark.measure do
   account = ConcurrentRubyAtomicBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -142,7 +157,7 @@ r2 = Benchmark.measure do
   balances << account.balance
 end
 
-r3 = Benchmark.measure do
+result_3 = Benchmark.measure do
   account = AtomicRubyAtomicBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -160,9 +175,9 @@ puts "Concurrent Ruby Atomic Bank Account Balance: #{balances[1]}"
 puts "Atomic Ruby Atomic Bank Account Balance:     #{balances[2]}"
 puts "\n"
 puts "Benchmark Results:"
-puts "Synchronized Bank Account:           #{r1.real.round(6)} seconds"
-puts "Concurrent Ruby Atomic Bank Account: #{r2.real.round(6)} seconds"
-puts "Atomic Ruby Atomic Bank Account:     #{r3.real.round(6)} seconds"
+puts "Synchronized Bank Account:           #{result_1.real.round(6)} seconds"
+puts "Concurrent Ruby Atomic Bank Account: #{result_2.real.round(6)} seconds"
+puts "Atomic Ruby Atomic Bank Account:     #{result_3.real.round(6)} seconds"
 ```
 
 ```
@@ -187,6 +202,87 @@ Atomic Ruby Atomic Bank Account:     1.755343 seconds
 
 <details>
 
+<summary>AtomicRuby::AtomicBoolean</summary>
+
+```ruby
+# frozen_string_literal: true
+
+require "benchmark/ips"
+require "concurrent-ruby"
+require_relative "../lib/atomic-ruby"
+
+Benchmark.ips do |x|
+  x.report("Synchronized Boolean Toggle") do
+    boolean = false
+    mutex = Mutex.new
+    20.times.map do
+      Thread.new do
+        100.times do
+          mutex.synchronize do
+            boolean = !boolean
+          end
+        end
+      end
+    end.each(&:join)
+  end
+
+  x.report("Concurrent Ruby Atomic Boolean Toggle") do
+    boolean = Concurrent::AtomicBoolean.new(false)
+    20.times.map do
+      Thread.new do
+        100.times do
+          # Not exactly atomic, but this
+          # is the closest matching API.
+          boolean.value = !boolean.value
+        end
+      end
+    end.each(&:join)
+  end
+
+  x.report("Atomic Ruby Atomic Boolean Toggle") do
+    boolean = AtomicRuby::AtomicBoolean.new(false)
+    20.times.map do
+      Thread.new do
+        100.times do
+          boolean.toggle
+        end
+      end
+    end.each(&:join)
+  end
+
+  x.compare!
+end
+```
+
+```
+> bundle exec rake compile && bundle exec ruby examples/atomic_boolean_benchmark.rb
+
+ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
+Warming up --------------------------------------
+Synchronized Boolean Toggle
+                        83.000 i/100ms
+Concurrent Ruby Atomic Boolean Toggle
+                        58.000 i/100ms
+Atomic Ruby Atomic Boolean Toggle
+                        88.000 i/100ms
+Calculating -------------------------------------
+Synchronized Boolean Toggle
+                        775.552 (± 6.2%) i/s    (1.29 ms/i) -      3.901k in   5.051649s
+Concurrent Ruby Atomic Boolean Toggle
+                        741.655 (± 3.5%) i/s    (1.35 ms/i) -      3.712k in   5.011183s
+Atomic Ruby Atomic Boolean Toggle
+                        881.916 (± 2.8%) i/s    (1.13 ms/i) -      4.488k in   5.092910s
+
+Comparison:
+Atomic Ruby Atomic Boolean Toggle:      881.9 i/s
+Synchronized Boolean Toggle:            775.6 i/s - 1.14x  slower
+Concurrent Ruby Atomic Boolean Toggle:  741.7 i/s - 1.19x  slower
+```
+
+</details>
+
+<details>
+
 <summary>AtomicRuby::AtomicThreadPool</summary>
 
 <br>
@@ -203,15 +299,15 @@ results = []
 2.times do |idx|
   result = Benchmark.measure do
     pool = case idx
-    when 0 then Concurrent::FixedThreadPool.new(5)
-    when 1 then AtomicRuby::AtomicThreadPool.new(size: 5)
+    when 0 then Concurrent::FixedThreadPool.new(20)
+    when 1 then AtomicRuby::AtomicThreadPool.new(size: 20)
     end
 
-    20.times do
+    100.times do
       pool << -> { sleep(0.25) }
     end
 
-    20.times do
+    100.times do
       pool << -> { 100_000.times.map(&:itself).sum }
     end
 
@@ -240,11 +336,11 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.1.0
+atomic-ruby version:     0.2.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    1.133100 seconds
-Atomic Ruby Atomic Thread Pool: 1.088543 seconds
+Concurrent Ruby Thread Pool:    1.666176 seconds
+Atomic Ruby Atomic Thread Pool: 1.617622 seconds
 ```
 
 </details>
