@@ -48,6 +48,12 @@ static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   return self;
 }
 
+static VALUE rb_cAtom_value(VALUE self) {
+  atomic_ruby_atom_t *atomic_ruby_atom;
+  TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
+  return (VALUE)RUBY_ATOMIC_PTR_LOAD(atomic_ruby_atom->value);
+}
+
 static VALUE rb_cAtom_swap(VALUE self) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
@@ -61,18 +67,12 @@ static VALUE rb_cAtom_swap(VALUE self) {
   return new_value;
 }
 
-static VALUE rb_cAtom_value(VALUE self) {
-  atomic_ruby_atom_t *atomic_ruby_atom;
-  TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
-  return (VALUE)RUBY_ATOMIC_PTR_LOAD(atomic_ruby_atom->value);
-}
-
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   VALUE rb_mAtomicRuby = rb_define_module("AtomicRuby");
   VALUE rb_cAtom = rb_define_class_under(rb_mAtomicRuby, "Atom", rb_cObject);
 
   rb_define_alloc_func(rb_cAtom, rb_cAtom_allocate);
   rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
-  rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
   rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
+  rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
 }
