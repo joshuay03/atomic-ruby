@@ -18,18 +18,55 @@ gem install atomic-ruby
 
 ## Usage
 
+`AtomicRuby::Atom`:
+
 ```ruby
 require "atomic-ruby"
 
 atom = AtomicRuby::Atom.new(0)
-puts atom.value # => 0
-atom.swap { |current| current + 1 }
-puts atom.value # => 1
-atom.swap { |current| current + 1 }
-puts atom.value # => 2
+p atom.value # => 0
+atom.swap { |current_value| current_value + 1 }
+p atom.value # => 1
+atom.swap { |current_value| current_value + 1 }
+p atom.value # => 2
+```
+
+`AtomicRuby::AtomicThreadPool`:
+
+```ruby
+require "atomic-ruby"
+
+results = []
+
+pool = AtomicRuby::AtomicThreadPool.new(size: 4)
+p pool.length       #=> 4
+
+10.times do |idx|
+  work = proc do
+    sleep(0.5)
+    results << (idx + 1)
+  end
+  pool << work
+end
+p pool.queue_length #=> 10
+sleep(0.5)
+p pool.queue_length #=> 2 (YMMV)
+
+pool.shutdown
+p pool.length       #=> 0
+p pool.queue_length #=> 0
+
+p results           #=> [8, 7, 10, 9, 6, 5, 3, 4, 2, 1]
+p results.sort      #=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
 ## Benchmarks
+
+<details>
+
+<summary>AtomicRuby::Atom</summary>
+
+<br>
 
 ```ruby
 # frozen_string_literal: true
@@ -126,7 +163,7 @@ puts "Atomic Ruby Atomic Bank Account:     #{r3.real.round(6)} seconds"
 ```
 
 ```
-> bundle exec rake compile && bundle exec ruby examples/benchmark.rb
+> bundle exec rake compile && bundle exec ruby examples/atom_benchmark.rb
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
@@ -142,6 +179,72 @@ Synchronized Bank Account:           1.900873 seconds
 Concurrent Ruby Atomic Bank Account: 1.840683 seconds
 Atomic Ruby Atomic Bank Account:     1.755343 seconds
 ```
+
+</details>
+
+<details>
+
+<summary>AtomicRuby::AtomicThreadPool</summary>
+
+<br>
+
+```ruby
+# frozen_string_literal: true
+
+require "benchmark"
+require "concurrent-ruby"
+require_relative "../lib/atomic-ruby"
+
+results = []
+
+2.times do |idx|
+  result = Benchmark.measure do
+    pool = case idx
+    when 0 then Concurrent::FixedThreadPool.new(5)
+    when 1 then AtomicRuby::AtomicThreadPool.new(size: 5)
+    end
+
+    20.times do
+      pool << -> { sleep(0.25) }
+    end
+
+    20.times do
+      pool << -> { 100_000.times.map(&:itself).sum }
+    end
+
+    # concurrent-ruby does not wait for threads to die on shutdown
+    threads = if idx == 0
+      pool.instance_variable_get(:@pool).map { |worker| worker.instance_variable_get(:@thread) }
+    end
+    pool.shutdown
+    threads&.each(&:join)
+  end
+
+  results << result
+end
+
+puts "ruby version:            #{RUBY_DESCRIPTION}"
+puts "concurrent-ruby version: #{Concurrent::VERSION}"
+puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
+puts "\n"
+puts "Benchmark Results:"
+puts "Concurrent Ruby Thread Pool:    #{results[0].real.round(6)} seconds"
+puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
+```
+
+```
+> bundle exec rake compile && bundle exec ruby examples/atomic_thread_pool_benchmark.rb
+
+ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
+concurrent-ruby version: 1.3.5
+atomic-ruby version:     0.1.0
+
+Benchmark Results:
+Concurrent Ruby Thread Pool:    1.133100 seconds
+Atomic Ruby Atomic Thread Pool: 1.088543 seconds
+```
+
+</details>
 
 ## Development
 

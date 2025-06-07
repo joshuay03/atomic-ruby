@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Add `AtomicThreadPool`
 - Require ruby >= 3.3
 - Make `Atom#value` atomic
 

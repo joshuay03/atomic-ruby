@@ -52,7 +52,7 @@ end
 
 balances = []
 
-r1 = Benchmark.measure do
+result_1 = Benchmark.measure do
   account = SynchronizedBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -60,7 +60,7 @@ r1 = Benchmark.measure do
   balances << account.balance
 end
 
-r2 = Benchmark.measure do
+result_2 = Benchmark.measure do
   account = ConcurrentRubyAtomicBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -68,7 +68,7 @@ r2 = Benchmark.measure do
   balances << account.balance
 end
 
-r3 = Benchmark.measure do
+result_3 = Benchmark.measure do
   account = AtomicRubyAtomicBankAccount.new(100)
   10_000.times.map { |i|
     Thread.new { account.deposit(i) }
@@ -86,6 +86,6 @@ puts "Concurrent Ruby Atomic Bank Account Balance: #{balances[1]}"
 puts "Atomic Ruby Atomic Bank Account Balance:     #{balances[2]}"
 puts "\n"
 puts "Benchmark Results:"
-puts "Synchronized Bank Account:           #{r1.real.round(6)} seconds"
-puts "Concurrent Ruby Atomic Bank Account: #{r2.real.round(6)} seconds"
-puts "Atomic Ruby Atomic Bank Account:     #{r3.real.round(6)} seconds"
+puts "Synchronized Bank Account:           #{result_1.real.round(6)} seconds"
+puts "Concurrent Ruby Atomic Bank Account: #{result_2.real.round(6)} seconds"
+puts "Atomic Ruby Atomic Bank Account:     #{result_3.real.round(6)} seconds"
