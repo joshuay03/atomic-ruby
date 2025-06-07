@@ -64,7 +64,7 @@ static VALUE rb_cAtom_swap(VALUE self) {
 static VALUE rb_cAtom_value(VALUE self) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
-  return atomic_ruby_atom->value;
+  return (VALUE)RUBY_ATOMIC_PTR_LOAD(atomic_ruby_atom->value);
 }
 
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
