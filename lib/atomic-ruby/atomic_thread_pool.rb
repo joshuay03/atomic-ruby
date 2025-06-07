@@ -18,8 +18,8 @@ module AtomicRuby
     end
 
     def <<(work)
-      unless Proc === work || work == :stop
-        raise UnsupportedWorkTypeError, "queued work must be a Proc"
+      unless work.is_a?(Proc) || work == :stop
+        raise UnsupportedWorkTypeError, "expected work to be a `Proc`, got #{work.class}"
       end
 
       if @stopping.value
