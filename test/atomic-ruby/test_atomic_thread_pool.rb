@@ -45,7 +45,7 @@ class TestAtomicThreadPool < Minitest::Test
       pool << -> { raise "oops" }
       sleep 1
     end
-    assert_match /AtomicRuby::AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out
+    assert_match(/AtomicRuby::AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out)
     pool.shutdown
   end
 

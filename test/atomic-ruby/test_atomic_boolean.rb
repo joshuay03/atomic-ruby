@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class TestAtom < Minitest::Test
+class TestAtomicBoolean < Minitest::Test
   def test_init
     boolean = AtomicRuby::AtomicBoolean.new(false)
     assert_equal false, boolean.value
