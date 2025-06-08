@@ -27,7 +27,7 @@ module AtomicRuby
         raise InvalidWorkQueueingError, "cannot queue work during or after pool shutdown"
       end
 
-      @queue.swap { |queue| queue << work }
+      @queue.swap { |current_queue| current_queue += [work] }
       true
     end
 
@@ -53,11 +53,11 @@ module AtomicRuby
           name = "AtomicRuby::AtomicThreadPool thread #{idx}"
           Thread.current.name = name
 
-          @started_threads.swap { |count| count + 1 }
+          @started_threads.swap { |current_count| current_count + 1 }
 
           loop do
             work = nil
-            @queue.swap { |queue| work = queue.last; queue[0..-2] }
+            @queue.swap { |current_queue| work = current_queue.last; current_queue[0..-2] }
             case work
             when Proc
               begin

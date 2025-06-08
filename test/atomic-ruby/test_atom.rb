@@ -10,9 +10,9 @@ class TestAtom < Minitest::Test
 
   def test_swap
     atom = AtomicRuby::Atom.new(0)
-    atom.swap { |current| current + 1 }
+    atom.swap { |current_value| current_value + 1 }
     assert_equal 1, atom.value
-    atom.swap { |current| current + 1 }
+    atom.swap { |current_value| current_value + 1 }
     assert_equal 2, atom.value
   end
 end

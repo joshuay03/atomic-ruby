@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix current queue being mutated in `AtomicThreadPool#<<`
+
 ## [0.2.0] - 2025-06-08
 
 - Add `AtomicBoolean`
