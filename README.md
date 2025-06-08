@@ -93,18 +93,22 @@ require "benchmark"
 require "concurrent-ruby"
 require_relative "../lib/atomic-ruby"
 
-class AtomicRubyAtomicBankAccount
+class SynchronizedBankAccount
   def initialize(balance)
-    @balance = AtomicRuby::Atom.new(balance)
+    @balance = balance
+    @mutex = Mutex.new
   end
 
   def balance
-    @balance.value
+    @mutex.synchronize do
+      @balance
+    end
   end
 
   def deposit(amount)
-    sleep(rand(0.1..0.2))
-    @balance.swap { |current| current + amount }
+    @mutex.synchronize do
+      @balance += amount
+    end
   end
 end
 
@@ -118,51 +122,51 @@ class ConcurrentRubyAtomicBankAccount
   end
 
   def deposit(amount)
-    sleep(rand(0.1..0.2))
-    @balance.swap { |current| current + amount }
+    @balance.swap { |current_balance| current_balance + amount }
   end
 end
 
-class SynchronizedBankAccount
-  attr_reader :balance
-
+class AtomicRubyAtomicBankAccount
   def initialize(balance)
-    @balance = balance
-    @mutex = Mutex.new
+    @balance = AtomicRuby::Atom.new(balance)
+  end
+
+  def balance
+    @balance.value
   end
 
   def deposit(amount)
-    sleep(rand(0.1..0.2))
-    @mutex.synchronize do
-      @balance += amount
-    end
+    @balance.swap { |current_balance| current_balance + amount }
   end
 end
 
 balances = []
+results = []
 
-result_1 = Benchmark.measure do
-  account = SynchronizedBankAccount.new(100)
-  10_000.times.map { |i|
-    Thread.new { account.deposit(i) }
-  }.each(&:join)
-  balances << account.balance
-end
+3.times do |idx|
+  klass = case idx
+  when 0 then SynchronizedBankAccount
+  when 1 then ConcurrentRubyAtomicBankAccount
+  when 2 then AtomicRubyAtomicBankAccount
+  end
 
-result_2 = Benchmark.measure do
-  account = ConcurrentRubyAtomicBankAccount.new(100)
-  10_000.times.map { |i|
-    Thread.new { account.deposit(i) }
-  }.each(&:join)
-  balances << account.balance
-end
+  result = Benchmark.measure do
+    account = klass.new(100)
 
-result_3 = Benchmark.measure do
-  account = AtomicRubyAtomicBankAccount.new(100)
-  10_000.times.map { |i|
-    Thread.new { account.deposit(i) }
-  }.each(&:join)
-  balances << account.balance
+    5.times.map do |idx|
+      Thread.new do
+        100.times do
+          account.deposit(idx + 1)
+          sleep(0.2)
+          account.deposit(idx + 2)
+        end
+      end
+    end.each(&:join)
+
+    balances << account.balance
+  end
+
+  results << result
 end
 
 puts "ruby version:            #{RUBY_DESCRIPTION}"
@@ -175,9 +179,9 @@ puts "Concurrent Ruby Atomic Bank Account Balance: #{balances[1]}"
 puts "Atomic Ruby Atomic Bank Account Balance:     #{balances[2]}"
 puts "\n"
 puts "Benchmark Results:"
-puts "Synchronized Bank Account:           #{result_1.real.round(6)} seconds"
-puts "Concurrent Ruby Atomic Bank Account: #{result_2.real.round(6)} seconds"
-puts "Atomic Ruby Atomic Bank Account:     #{result_3.real.round(6)} seconds"
+puts "Synchronized Bank Account:           #{results[0].real.round(6)} seconds"
+puts "Concurrent Ruby Atomic Bank Account: #{results[1].real.round(6)} seconds"
+puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 ```
 
 ```
@@ -185,17 +189,17 @@ puts "Atomic Ruby Atomic Bank Account:     #{result_3.real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.1.0
+atomic-ruby version:     0.2.0
 
 Balances:
-Synchronized Bank Account Balance:           49995100
-Concurrent Ruby Atomic Bank Account Balance: 49995100
-Atomic Ruby Atomic Bank Account Balance:     49995100
+Synchronized Bank Account Balance:           3600
+Concurrent Ruby Atomic Bank Account Balance: 3600
+Atomic Ruby Atomic Bank Account Balance:     3600
 
 Benchmark Results:
-Synchronized Bank Account:           1.900873 seconds
-Concurrent Ruby Atomic Bank Account: 1.840683 seconds
-Atomic Ruby Atomic Bank Account:     1.755343 seconds
+Synchronized Bank Account:           20.467293 seconds
+Concurrent Ruby Atomic Bank Account: 20.460731 seconds
+Atomic Ruby Atomic Bank Account:     20.455696 seconds
 ```
 
 </details>
@@ -304,11 +308,11 @@ results = []
     end
 
     100.times do
-      pool << -> { sleep(0.25) }
+      pool << -> { sleep(0.2) }
     end
 
     100.times do
-      pool << -> { 100_000.times.map(&:itself).sum }
+      pool << -> { 1_000_000.times.map(&:itself).sum }
     end
 
     # concurrent-ruby does not wait for threads to die on shutdown
@@ -339,8 +343,8 @@ concurrent-ruby version: 1.3.5
 atomic-ruby version:     0.2.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    1.666176 seconds
-Atomic Ruby Atomic Thread Pool: 1.617622 seconds
+Concurrent Ruby Thread Pool:    5.188700 seconds
+Atomic Ruby Atomic Thread Pool: 4.783689 seconds
 ```
 
 </details>
