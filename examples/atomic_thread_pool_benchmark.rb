@@ -21,12 +21,9 @@ results = []
       pool << -> { 1_000_000.times.map(&:itself).sum }
     end
 
-    # concurrent-ruby does not wait for threads to die on shutdown
-    threads = if idx == 0
-      pool.instance_variable_get(:@pool).map { |worker| worker.instance_variable_get(:@thread) }
-    end
     pool.shutdown
-    threads&.each(&:join)
+    # concurrent-ruby's #shutdown does not wait for threads to terminate
+    pool.wait_for_termination if idx == 0
   end
 
   results << result

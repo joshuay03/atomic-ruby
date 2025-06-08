@@ -189,7 +189,7 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.3.0
+atomic-ruby version:     0.3.1
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -315,12 +315,9 @@ results = []
       pool << -> { 1_000_000.times.map(&:itself).sum }
     end
 
-    # concurrent-ruby does not wait for threads to die on shutdown
-    threads = if idx == 0
-      pool.instance_variable_get(:@pool).map { |worker| worker.instance_variable_get(:@thread) }
-    end
     pool.shutdown
-    threads&.each(&:join)
+    # concurrent-ruby's #shutdown does not wait for threads to terminate
+    pool.wait_for_termination if idx == 0
   end
 
   results << result
@@ -340,11 +337,11 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.3.0
+atomic-ruby version:     0.3.1
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.136456 seconds
-Atomic Ruby Atomic Thread Pool: 4.700981 seconds
+Concurrent Ruby Thread Pool:    5.13142 seconds
+Atomic Ruby Atomic Thread Pool: 4.672352 seconds
 ```
 
 </details>
