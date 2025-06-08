@@ -66,7 +66,7 @@ results = []
 
     5.times.map do |idx|
       Thread.new do
-        100.times do
+        25.times do
           account.deposit(idx + 1)
           sleep(0.2)
           account.deposit(idx + 2)

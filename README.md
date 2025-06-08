@@ -155,7 +155,7 @@ results = []
 
     5.times.map do |idx|
       Thread.new do
-        100.times do
+        25.times do
           account.deposit(idx + 1)
           sleep(0.2)
           account.deposit(idx + 2)
@@ -189,17 +189,17 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.2.0
+atomic-ruby version:     0.3.0
 
 Balances:
-Synchronized Bank Account Balance:           3600
-Concurrent Ruby Atomic Bank Account Balance: 3600
-Atomic Ruby Atomic Bank Account Balance:     3600
+Synchronized Bank Account Balance:           975
+Concurrent Ruby Atomic Bank Account Balance: 975
+Atomic Ruby Atomic Bank Account Balance:     975
 
 Benchmark Results:
-Synchronized Bank Account:           20.467293 seconds
-Concurrent Ruby Atomic Bank Account: 20.460731 seconds
-Atomic Ruby Atomic Bank Account:     20.455696 seconds
+Synchronized Bank Account:           5.125638 seconds
+Concurrent Ruby Atomic Bank Account: 5.114936 seconds
+Atomic Ruby Atomic Bank Account:     5.108171 seconds
 ```
 
 </details>
