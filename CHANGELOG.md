@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix `AtomicThreadPool#<<` shutdown check race condition
+
 ## [0.3.1] - 2025-06-08
 
 - Fix current queue being mutated in `AtomicThreadPool#<<`
