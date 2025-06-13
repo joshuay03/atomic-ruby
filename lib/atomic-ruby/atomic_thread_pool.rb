@@ -80,7 +80,7 @@ module AtomicRuby
         end
       end
 
-      sleep(0.001) until @started_threads.value == @size
+      Thread.pass until @started_threads.value == @size
     end
   end
 end
