@@ -29,6 +29,7 @@ results = []
   results << result
 end
 
+puts "\n"
 puts "ruby version:            #{RUBY_DESCRIPTION}"
 puts "concurrent-ruby version: #{Concurrent::VERSION}"
 puts "atomic-ruby version:     #{AtomicRuby::VERSION}"

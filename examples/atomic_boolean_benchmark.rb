@@ -4,6 +4,23 @@ require "benchmark/ips"
 require "concurrent-ruby"
 require_relative "../lib/atomic-ruby"
 
+module Benchmark
+  module IPS
+    class Job
+      class StreamReport
+        def start_warming
+          @out.puts "\n"
+          @out.puts "ruby version:            #{RUBY_DESCRIPTION}"
+          @out.puts "concurrent-ruby version: #{Concurrent::VERSION}"
+          @out.puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
+          @out.puts "\n"
+          @out.puts "Warming up --------------------------------------"
+        end
+      end
+    end
+  end
+end
+
 Benchmark.ips do |x|
   x.report("Synchronized Boolean Toggle") do
     boolean = false

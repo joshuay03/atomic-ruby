@@ -169,6 +169,7 @@ results = []
   results << result
 end
 
+puts "\n"
 puts "ruby version:            #{RUBY_DESCRIPTION}"
 puts "concurrent-ruby version: #{Concurrent::VERSION}"
 puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
@@ -214,6 +215,23 @@ Atomic Ruby Atomic Bank Account:     5.108171 seconds
 require "benchmark/ips"
 require "concurrent-ruby"
 require_relative "../lib/atomic-ruby"
+
+module Benchmark
+  module IPS
+    class Job
+      class StreamReport
+        def start_warming
+          @out.puts "\n"
+          @out.puts "ruby version:            #{RUBY_DESCRIPTION}"
+          @out.puts "concurrent-ruby version: #{Concurrent::VERSION}"
+          @out.puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
+          @out.puts "\n"
+          @out.puts "Warming up --------------------------------------"
+        end
+      end
+    end
+  end
+end
 
 Benchmark.ips do |x|
   x.report("Synchronized Boolean Toggle") do
@@ -261,7 +279,10 @@ end
 ```
 > bundle exec rake compile && bundle exec ruby examples/atomic_boolean_benchmark.rb
 
-ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
+ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
+concurrent-ruby version: 1.3.5
+atomic-ruby version:     0.3.1
+
 Warming up --------------------------------------
 Synchronized Boolean Toggle
                         83.000 i/100ms
@@ -323,6 +344,7 @@ results = []
   results << result
 end
 
+puts "\n"
 puts "ruby version:            #{RUBY_DESCRIPTION}"
 puts "concurrent-ruby version: #{Concurrent::VERSION}"
 puts "atomic-ruby version:     #{AtomicRuby::VERSION}"
