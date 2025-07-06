@@ -11,11 +11,11 @@ module AtomicRuby
         raise InvalidBooleanError, "expected boolean to be a `TrueClass` or `FalseClass`, got #{value.class}"
       end
 
-      @atom = Atom.new(value)
+      @boolean = Atom.new(value)
     end
 
     def value
-      @atom.value
+      @boolean.value
     end
 
     def true?
@@ -27,15 +27,15 @@ module AtomicRuby
     end
 
     def make_true
-      @atom.swap { true }
+      @boolean.swap { true }
     end
 
     def make_false
-      @atom.swap { false }
+      @boolean.swap { false }
     end
 
     def toggle
-      @atom.swap { |current_value| !current_value }
+      @boolean.swap { |current_value| !current_value }
     end
   end
 end
