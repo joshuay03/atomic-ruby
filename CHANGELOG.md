@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Revert "Fix `AtomicThreadPool#<<` shutdown check race condition"
+
 ## [0.3.2] - 2025-06-14
 
 - Fix `AtomicThreadPool#<<` shutdown check race condition

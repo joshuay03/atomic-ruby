@@ -23,13 +23,11 @@ module AtomicRuby
         raise UnsupportedWorkTypeError, "expected work to be a `Proc`, got #{work.class}"
       end
 
-      @queue.swap do |current_queue|
-        if @stopping.true?
-          raise InvalidWorkQueueingError, "cannot queue work during or after pool shutdown"
-        end
-
-        current_queue += [work]
+      if @stopping.true?
+        raise InvalidWorkQueueingError, "cannot queue work during or after pool shutdown"
       end
+
+      @queue.swap { |current_queue| current_queue += [work] }
       true
     end
 
