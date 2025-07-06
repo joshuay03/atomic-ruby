@@ -4,15 +4,15 @@ require "test_helper"
 
 class TestAtomicThreadPool < Minitest::Test
   def test_start
-    pool = AtomicRuby::AtomicThreadPool.new(size: 2)
-    assert_equal 2, Thread.list.count { |thread| thread.name =~ /AtomicRuby::AtomicThreadPool thread \d+/ }
+    pool = AtomicRuby::AtomicThreadPool.new(size: 2, name: "Test Pool")
+    assert_equal 2, Thread.list.count { |thread| thread.name =~ /AtomicRuby::AtomicThreadPool thread \d+ for Test Pool/ }
     pool.shutdown
   end
 
   def test_shutdown
-    pool = AtomicRuby::AtomicThreadPool.new(size: 2)
+    pool = AtomicRuby::AtomicThreadPool.new(size: 2, name: "Test Pool")
     pool.shutdown
-    assert_equal 0, Thread.list.count { |thread| thread.name =~ /AtomicRuby::AtomicThreadPool thread \d+/ }
+    assert_equal 0, Thread.list.count { |thread| thread.name =~ /AtomicRuby::AtomicThreadPool thread \d+ for Test Pool/ }
   end
 
   def test_queue

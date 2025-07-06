@@ -8,8 +8,9 @@ module AtomicRuby
     class UnsupportedWorkTypeError < StandardError; end
     class InvalidWorkQueueingError < StandardError; end
 
-    def initialize(size:)
+    def initialize(size:, name: nil)
       @size = size
+      @name = name
       @queue = Atom.new([])
       @threads = []
       @started_threads = Atom.new(0)
@@ -50,8 +51,9 @@ module AtomicRuby
     def start
       @threads = @size.times.map do |num|
         Thread.new(num) do |idx|
-          name = "AtomicRuby::AtomicThreadPool thread #{idx}"
-          Thread.current.name = name
+          thread_name = String.new("AtomicRuby::AtomicThreadPool thread #{idx}")
+          thread_name << " for #{@name}" if @name
+          Thread.current.name = thread_name
 
           @started_threads.swap { |current_count| current_count + 1 }
 
@@ -63,7 +65,7 @@ module AtomicRuby
               begin
                 work.call
               rescue => err
-                puts "#{name} rescued:"
+                puts "#{thread_name} rescued:"
                 puts "#{err.class}: #{err.message}"
                 puts err.backtrace.join("\n")
               end
