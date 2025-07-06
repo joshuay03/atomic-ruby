@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.4.0] - 2025-07-06
+
 - Revert "Fix `AtomicThreadPool#<<` shutdown check race condition"
 - Add `:name` to `AtomicThreadPool` initializer
 - Add `AtomicCountDownLatch`

@@ -190,7 +190,7 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.3.2
+atomic-ruby version:     0.4.0
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -198,9 +198,9 @@ Concurrent Ruby Atomic Bank Account Balance: 975
 Atomic Ruby Atomic Bank Account Balance:     975
 
 Benchmark Results:
-Synchronized Bank Account:           5.130792 seconds
-Concurrent Ruby Atomic Bank Account: 5.121400 seconds
-Atomic Ruby Atomic Bank Account:     5.119191 seconds
+Synchronized Bank Account:           5.110062 seconds
+Concurrent Ruby Atomic Bank Account: 5.107966 seconds
+Atomic Ruby Atomic Bank Account:     5.107739 seconds
 ```
 
 </details>
@@ -281,27 +281,27 @@ end
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.3.2
+atomic-ruby version:     0.4.0
 
 Warming up --------------------------------------
 Synchronized Boolean Toggle
-                        87.000 i/100ms
+                       102.000 i/100ms
 Concurrent Ruby Atomic Boolean Toggle
-                        81.000 i/100ms
+                        88.000 i/100ms
 Atomic Ruby Atomic Boolean Toggle
-                        92.000 i/100ms
+                       109.000 i/100ms
 Calculating -------------------------------------
 Synchronized Boolean Toggle
-                        969.205 (± 5.8%) i/s    (1.03 ms/i) -      4.872k in   5.043520s
+                          1.062k (± 2.5%) i/s  (941.81 μs/i) -      5.406k in   5.094827s
 Concurrent Ruby Atomic Boolean Toggle
-                        885.546 (± 5.2%) i/s    (1.13 ms/i) -      4.455k in   5.044282s
+                        981.495 (± 3.5%) i/s    (1.02 ms/i) -      4.928k in   5.027167s
 Atomic Ruby Atomic Boolean Toggle
-                         1.154k (± 5.3%) i/s  (866.65 μs/i) -      5.796k in   5.037272s
+                          1.274k (± 1.5%) i/s  (784.70 μs/i) -      6.431k in   5.047458s
 
 Comparison:
-Atomic Ruby Atomic Boolean Toggle:     1153.9 i/s
-Synchronized Boolean Toggle:            969.2 i/s - 1.19x  slower
-Concurrent Ruby Atomic Boolean Toggle:  885.5 i/s - 1.30x  slower
+Atomic Ruby Atomic Boolean Toggle:         1274.4 i/s
+Synchronized Boolean Toggle:               1061.8 i/s - 1.20x  slower
+Concurrent Ruby Atomic Boolean Toggle:      981.5 i/s - 1.30x  slower
 ```
 
 </details>
@@ -359,11 +359,11 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 
 ruby version:            ruby 3.4.4 (2025-05-14 revision a38531fd3f) +YJIT +PRISM [arm64-darwin24]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.3.2
+atomic-ruby version:     0.4.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.032940 seconds
-Atomic Ruby Atomic Thread Pool: 4.508259 seconds
+Concurrent Ruby Thread Pool:    5.02207 seconds
+Atomic Ruby Atomic Thread Pool: 4.503302 seconds
 ```
 
 </details>
