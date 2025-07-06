@@ -23,7 +23,7 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal [1, 2, 3, 4, 5], results.sort
   end
 
-  def test_queue_invalid_work
+  def test_queue_with_invalid_work
     pool = AtomicRuby::AtomicThreadPool.new(size: 2)
     assert_raises AtomicRuby::AtomicThreadPool::UnsupportedWorkTypeError do
       pool << 1

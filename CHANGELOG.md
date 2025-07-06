@@ -2,6 +2,7 @@
 
 - Revert "Fix `AtomicThreadPool#<<` shutdown check race condition"
 - Add `:name` to `AtomicThreadPool` initializer
+- Add `AtomicCountDownLatch`
 
 ## [0.3.2] - 2025-06-14
 
