@@ -78,6 +78,25 @@ p results           #=> [8, 7, 10, 9, 6, 5, 3, 4, 2, 1]
 p results.sort      #=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
+`AtomicRuby::AtomicCountDownLatch`:
+
+```ruby
+require "atomic-ruby"
+
+latch = AtomicRuby::AtomicCountDownLatch.new(3)
+p latch.count #=> 3
+
+threads = 3.times.map do
+  Thread.new do
+    sleep(rand(5))
+    latch.count_down
+  end
+end
+
+latch.wait
+p latch.count #=> 0
+```
+
 ## Benchmarks
 
 <details>
