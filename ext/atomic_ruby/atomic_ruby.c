@@ -24,7 +24,7 @@ static void atomic_ruby_atom_compact(void *ptr) {
 }
 
 static const rb_data_type_t atomic_ruby_atom_type = {
-  .wrap_struct_name = "AtomicRuby::Atom",
+  .wrap_struct_name = "Atom",
   .function = {
     .dmark = atomic_ruby_atom_mark,
     .dfree = atomic_ruby_atom_free,

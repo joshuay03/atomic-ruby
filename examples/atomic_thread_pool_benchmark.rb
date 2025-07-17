@@ -10,7 +10,7 @@ results = []
   result = Benchmark.measure do
     pool = case idx
     when 0 then Concurrent::FixedThreadPool.new(20)
-    when 1 then AtomicRuby::AtomicThreadPool.new(size: 20)
+    when 1 then AtomicThreadPool.new(size: 20)
     end
 
     100.times do

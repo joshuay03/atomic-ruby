@@ -21,12 +21,12 @@ gem install atomic-ruby
 
 ## Usage
 
-`AtomicRuby::Atom`:
+`Atom`:
 
 ```ruby
 require "atomic-ruby"
 
-atom = AtomicRuby::Atom.new(0)
+atom = Atom.new(0)
 p atom.value #=> 0
 atom.swap { |current_value| current_value + 1 }
 p atom.value #=> 1
@@ -34,12 +34,12 @@ atom.swap { |current_value| current_value + 1 }
 p atom.value #=> 2
 ```
 
-`AtomicRuby::AtomicBoolean`:
+`AtomicBoolean`:
 
 ```ruby
 require "atomic-ruby"
 
-atom = AtomicRuby::AtomicBoolean.new(false)
+atom = AtomicBoolean.new(false)
 p atom.value  #=> false
 p atom.false? #=> true
 p atom.true?  #=> false
@@ -49,14 +49,14 @@ atom.toggle
 p atom.false? #=> true
 ```
 
-`AtomicRuby::AtomicThreadPool`:
+`AtomicThreadPool`:
 
 ```ruby
 require "atomic-ruby"
 
 results = []
 
-pool = AtomicRuby::AtomicThreadPool.new(size: 4)
+pool = AtomicThreadPool.new(size: 4)
 p pool.length       #=> 4
 
 10.times do |idx|
@@ -78,12 +78,12 @@ p results           #=> [8, 7, 10, 9, 6, 5, 3, 4, 2, 1]
 p results.sort      #=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
-`AtomicRuby::AtomicCountDownLatch`:
+`AtomicCountDownLatch`:
 
 ```ruby
 require "atomic-ruby"
 
-latch = AtomicRuby::AtomicCountDownLatch.new(3)
+latch = AtomicCountDownLatch.new(3)
 p latch.count #=> 3
 
 threads = 3.times.map do
@@ -101,7 +101,7 @@ p latch.count #=> 0
 
 <details>
 
-<summary>AtomicRuby::Atom</summary>
+<summary>Atom</summary>
 
 <br>
 
@@ -147,7 +147,7 @@ end
 
 class AtomicRubyAtomicBankAccount
   def initialize(balance)
-    @balance = AtomicRuby::Atom.new(balance)
+    @balance = Atom.new(balance)
   end
 
   def balance
@@ -226,7 +226,7 @@ Atomic Ruby Atomic Bank Account:     5.107739 seconds
 
 <details>
 
-<summary>AtomicRuby::AtomicBoolean</summary>
+<summary>AtomicBoolean</summary>
 
 ```ruby
 # frozen_string_literal: true
@@ -281,7 +281,7 @@ Benchmark.ips do |x|
   end
 
   x.report("Atomic Ruby Atomic Boolean Toggle") do
-    boolean = AtomicRuby::AtomicBoolean.new(false)
+    boolean = AtomicBoolean.new(false)
     20.times.map do
       Thread.new do
         100.times do
@@ -327,7 +327,7 @@ Concurrent Ruby Atomic Boolean Toggle:      981.5 i/s - 1.30x  slower
 
 <details>
 
-<summary>AtomicRuby::AtomicThreadPool</summary>
+<summary>AtomicThreadPool</summary>
 
 <br>
 
@@ -344,7 +344,7 @@ results = []
   result = Benchmark.measure do
     pool = case idx
     when 0 then Concurrent::FixedThreadPool.new(20)
-    when 1 then AtomicRuby::AtomicThreadPool.new(size: 20)
+    when 1 then AtomicThreadPool.new(size: 20)
     end
 
     100.times do

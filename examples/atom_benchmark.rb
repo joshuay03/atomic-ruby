@@ -39,7 +39,7 @@ end
 
 class AtomicRubyAtomicBankAccount
   def initialize(balance)
-    @balance = AtomicRuby::Atom.new(balance)
+    @balance = Atom.new(balance)
   end
 
   def balance

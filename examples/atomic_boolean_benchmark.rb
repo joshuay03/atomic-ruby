@@ -50,7 +50,7 @@ Benchmark.ips do |x|
   end
 
   x.report("Atomic Ruby Atomic Boolean Toggle") do
-    boolean = AtomicRuby::AtomicBoolean.new(false)
+    boolean = AtomicBoolean.new(false)
     20.times.map do
       Thread.new do
         100.times do

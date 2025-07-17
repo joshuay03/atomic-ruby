@@ -51,7 +51,7 @@ module AtomicRuby
     def start
       @threads = @size.times.map do |num|
         Thread.new(num) do |idx|
-          thread_name = String.new("AtomicRuby::AtomicThreadPool thread #{idx}")
+          thread_name = String.new("AtomicThreadPool thread #{idx}")
           thread_name << " for #{@name}" if @name
           Thread.current.name = thread_name
 
