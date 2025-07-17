@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.5.0] - 2025-07-17
+
 - Add shortcut aliases for `AtomicRuby` namespaced classes
 
 ## [0.4.0] - 2025-07-06
