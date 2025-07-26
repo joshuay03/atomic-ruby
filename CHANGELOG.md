@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Revert `wrap_struct_name` back to `AtomicRuby::Atom`
+
 ## [0.5.0] - 2025-07-17
 
 - Add shortcut aliases for `AtomicRuby` namespaced classes
