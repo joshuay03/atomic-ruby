@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/gem/v/atomic-ruby)
 ![Build](https://img.shields.io/github/actions/workflow/status/joshuay03/atomic-ruby/.github/workflows/main.yml?branch=main)
 
-Atomic primitives for Ruby.
+Atomic ([CAS](https://en.wikipedia.org/wiki/Compare-and-swap)) primitives for Ruby.
 
 ## Installation
 
