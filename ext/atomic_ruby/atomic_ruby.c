@@ -68,6 +68,10 @@ static VALUE rb_cAtom_swap(VALUE self) {
 }
 
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
+#ifdef HAVE_RB_EXT_RACTOR_SAFE
+  rb_ext_ractor_safe(true);
+#endif
+
   VALUE rb_mAtomicRuby = rb_define_module("AtomicRuby");
   VALUE rb_cAtom = rb_define_class_under(rb_mAtomicRuby, "Atom", rb_cObject);
 
@@ -75,8 +79,4 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
   rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
   rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
-
-#ifdef HAVE_RB_EXT_RACTOR_SAFE
-  rb_ext_ractor_safe(true);
-#endif
 }

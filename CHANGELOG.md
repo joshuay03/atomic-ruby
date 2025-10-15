@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix Ractor safety by properly marking native extension methods as safe
+
 ## [0.6.3] - 2025-10-15
 
 - Standardize directory structure to fix native extension loading

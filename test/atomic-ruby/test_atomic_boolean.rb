@@ -21,9 +21,33 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :true?
   end
 
+  def test_make_true_in_ractor
+    boolean = AtomicBoolean.new(false)
+    ractors = 10.times.map do
+      Ractor.new(boolean) do |shared_boolean|
+        shared_boolean.make_true
+      end
+    end
+    RUBY_VERSION >= "3.5" ? ractors.each(&:value) : ractors.each(&:take)
+    assert_equal true, boolean.value
+    assert_predicate boolean, :true?
+  end
+
   def test_make_false
     boolean = AtomicBoolean.new(true)
     boolean.make_false
+    assert_equal false, boolean.value
+    assert_predicate boolean, :false?
+  end
+
+  def test_make_false_in_ractor
+    boolean = AtomicBoolean.new(true)
+    ractors = 10.times.map do
+      Ractor.new(boolean) do |shared_boolean|
+        shared_boolean.make_false
+      end
+    end
+    RUBY_VERSION >= "3.5" ? ractors.each(&:value) : ractors.each(&:take)
     assert_equal false, boolean.value
     assert_predicate boolean, :false?
   end
@@ -33,5 +57,17 @@ class TestAtomicBoolean < Minitest::Test
     boolean.toggle
     assert_equal false, boolean.value
     assert_predicate boolean, :false?
+  end
+
+  def test_toggle_in_ractor
+    boolean = AtomicBoolean.new(true)
+    ractors = 10.times.map do
+      Ractor.new(boolean) do |shared_boolean|
+        shared_boolean.toggle
+      end
+    end
+    RUBY_VERSION >= "3.5" ? ractors.each(&:value) : ractors.each(&:take)
+    assert_equal true, boolean.value
+    assert_predicate boolean, :true?
   end
 end
