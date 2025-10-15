@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Use `require` instead of `require_relative` for loading native extension
+
 ## [0.6.1] - 2025-10-15
 
 - Exclude pre-compiled native extensions from gem files
