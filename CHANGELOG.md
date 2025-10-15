@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.6.4] - 2025-10-15
+
 - Fix Ractor safety by properly marking native extension methods as safe
 
 ## [0.6.3] - 2025-10-15
