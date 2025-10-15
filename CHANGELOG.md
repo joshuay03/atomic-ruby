@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Exclude pre-compiled native extensions from gem files
+
 ## [0.6.0] - 2025-10-15
 
 - Make `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` Ractor shareable
