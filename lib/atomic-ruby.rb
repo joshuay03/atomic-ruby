@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "atomic-ruby/atomic_ruby"
+require "atomic_ruby/atomic_ruby"
 
 require_relative "atomic-ruby/version"
 require_relative "atomic-ruby/atom"

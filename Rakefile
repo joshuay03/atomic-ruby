@@ -12,7 +12,7 @@ task build: :compile
 GEMSPEC = Gem::Specification.load("atomic_ruby.gemspec")
 
 Rake::ExtensionTask.new("atomic_ruby", GEMSPEC) do |ext|
-  ext.lib_dir = "lib/atomic-ruby"
+  ext.lib_dir = "lib/atomic_ruby"
 end
 
 task default: %i[clobber compile test]
