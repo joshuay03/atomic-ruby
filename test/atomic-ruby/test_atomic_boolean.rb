@@ -9,6 +9,11 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :false?
   end
 
+  def test_shareable
+    boolean = AtomicBoolean.new(true)
+    assert Ractor.shareable?(boolean)
+  end
+
   def test_make_true
     boolean = AtomicBoolean.new(false)
     boolean.make_true

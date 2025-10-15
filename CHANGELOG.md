@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Make `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` Ractor shareable
+
 ## [0.5.1] - 2025-07-26
 
 - Revert `wrap_struct_name` back to `AtomicRuby::Atom`

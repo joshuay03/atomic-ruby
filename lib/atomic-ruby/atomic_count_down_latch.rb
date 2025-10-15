@@ -13,6 +13,8 @@ module AtomicRuby
       end
 
       @count = Atom.new(count)
+
+      Ractor.make_shareable(self)
     end
 
     def count

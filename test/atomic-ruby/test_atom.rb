@@ -8,6 +8,11 @@ class TestAtom < Minitest::Test
     assert_equal 0, atom.value
   end
 
+  def test_shareable
+    atom = Atom.new(0)
+    assert Ractor.shareable?(atom)
+  end
+
   def test_swap
     atom = Atom.new(0)
     atom.swap { |current_value| current_value + 1 }

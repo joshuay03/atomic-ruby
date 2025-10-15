@@ -31,7 +31,7 @@ static const rb_data_type_t atomic_ruby_atom_type = {
     .dsize = atomic_ruby_atom_memsize,
     .dcompact = atomic_ruby_atom_compact
   },
-  .flags = RUBY_TYPED_FREE_IMMEDIATELY
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_FROZEN_SHAREABLE
 };
 
 static VALUE rb_cAtom_allocate(VALUE klass) {
@@ -75,4 +75,8 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
   rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
   rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
+
+#ifdef HAVE_RB_EXT_RACTOR_SAFE
+  rb_ext_ractor_safe(true);
+#endif
 }

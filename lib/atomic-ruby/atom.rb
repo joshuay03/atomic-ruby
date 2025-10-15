@@ -4,6 +4,8 @@ module AtomicRuby
   class Atom
     def initialize(value)
       _initialize(value)
+
+      Ractor.make_shareable(self)
     end
 
     def value

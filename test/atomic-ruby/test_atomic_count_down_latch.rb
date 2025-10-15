@@ -3,6 +3,16 @@
 require "test_helper"
 
 class TestAtomicCountDownLatch < Minitest::Test
+  def test_init
+    latch = AtomicCountDownLatch.new(5)
+    assert_equal 5, latch.count
+  end
+
+  def test_shareable
+    latch = AtomicCountDownLatch.new(5)
+    assert Ractor.shareable?(latch)
+  end
+
   def test_with_invalid_count
     assert_raises AtomicCountDownLatch::InvalidCountError do
       AtomicCountDownLatch.new(0.5)

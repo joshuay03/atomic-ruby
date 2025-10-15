@@ -3,6 +3,18 @@
 require "test_helper"
 
 class TestAtomicThreadPool < Minitest::Test
+  def test_init
+    pool = AtomicThreadPool.new(size: 2)
+    assert_equal 2, pool.length
+    assert_equal 0, pool.queue_length
+  end
+
+  def test_not_shareable
+    pool = AtomicThreadPool.new(size: 2)
+    refute Ractor.shareable?(pool)
+    pool.shutdown
+  end
+
   def test_start
     pool = AtomicThreadPool.new(size: 2, name: "Test Pool")
     assert_equal 2, Thread.list.count { |thread| thread.name =~ /AtomicThreadPool thread \d+ for Test Pool/ }
