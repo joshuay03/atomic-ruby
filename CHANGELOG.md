@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.6.1] - 2025-10-15
+
 - Exclude pre-compiled native extensions from gem files
 
 ## [0.6.0] - 2025-10-15
