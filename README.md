@@ -97,6 +97,9 @@ latch.wait
 p latch.count #=> 0
 ```
 
+> [!NOTE]
+> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are also Ractor safe.
+
 ## Benchmarks
 
 <details>
