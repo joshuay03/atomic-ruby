@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.6.0] - 2025-10-15
+
 - Make `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` Ractor shareable
 
 ## [0.5.1] - 2025-07-26
