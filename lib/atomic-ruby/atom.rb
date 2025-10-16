@@ -17,3 +17,5 @@ module AtomicRuby
     end
   end
 end
+
+Atom = AtomicRuby::Atom

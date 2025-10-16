@@ -34,3 +34,5 @@ module AtomicRuby
     end
   end
 end
+
+AtomicCountDownLatch = AtomicRuby::AtomicCountDownLatch

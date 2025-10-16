@@ -41,3 +41,5 @@ module AtomicRuby
     end
   end
 end
+
+AtomicBoolean = AtomicRuby::AtomicBoolean

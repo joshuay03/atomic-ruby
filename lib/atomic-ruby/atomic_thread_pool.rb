@@ -86,3 +86,5 @@ module AtomicRuby
     end
   end
 end
+
+AtomicThreadPool = AtomicRuby::AtomicThreadPool

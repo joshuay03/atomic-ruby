@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Move shortcut aliases for `AtomicRuby` namespaced classes to respective files
+
 ## [0.6.4] - 2025-10-15
 
 - Fix Ractor safety by properly marking native extension methods as safe
