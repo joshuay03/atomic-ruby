@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.6.6] - 2025-10-16
+
 - Fix individual file requires
 
 ## [0.6.5] - 2025-10-16
