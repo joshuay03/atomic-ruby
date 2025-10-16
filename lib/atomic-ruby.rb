@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "atomic_ruby/atomic_ruby"
-
 require_relative "atomic-ruby/version"
 require_relative "atomic-ruby/atom"
 require_relative "atomic-ruby/atomic_boolean"

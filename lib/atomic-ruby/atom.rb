@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "atomic_ruby/atomic_ruby"
+
 module AtomicRuby
   class Atom
     def initialize(value)
