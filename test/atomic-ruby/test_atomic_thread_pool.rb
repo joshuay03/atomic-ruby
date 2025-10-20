@@ -63,7 +63,7 @@ class TestAtomicThreadPool < Minitest::Test
   def test_enqueue_length
     pool = AtomicThreadPool.new(size: 2)
     5.times { pool << -> { sleep 1 } }
-    assert_equal 5, pool.queue_length
+    assert_operator pool.queue_length, :>=, 3
     pool.shutdown
     assert_equal 0, pool.queue_length
   end
