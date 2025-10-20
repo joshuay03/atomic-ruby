@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.7.0] - 2025-10-20
+
 - Improve thread safety, performance, and error handling across atomic classes
 
 ## [0.6.6] - 2025-10-16
