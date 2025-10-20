@@ -14,7 +14,7 @@ class TestAtomicCountDownLatch < Minitest::Test
   end
 
   def test_with_invalid_count
-    assert_raises AtomicCountDownLatch::InvalidCountError do
+    assert_raises ArgumentError do
       AtomicCountDownLatch.new(0.5)
     end
   end

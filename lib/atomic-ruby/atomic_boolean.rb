@@ -4,14 +4,12 @@ require_relative "atom"
 
 module AtomicRuby
   class AtomicBoolean
-    class InvalidBooleanError < StandardError; end
-
-    def initialize(value)
-      unless value.is_a?(TrueClass) || value.is_a?(FalseClass)
-        raise InvalidBooleanError, "expected boolean to be a `TrueClass` or `FalseClass`, got #{value.class}"
+    def initialize(boolean)
+      unless boolean.is_a?(TrueClass) || boolean.is_a?(FalseClass)
+        raise ArgumentError, "boolean must be a TrueClass or FalseClass, got #{boolean.class}"
       end
 
-      @boolean = Atom.new(value)
+      @boolean = Atom.new(boolean)
 
       Ractor.make_shareable(self)
     end

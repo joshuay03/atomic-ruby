@@ -1,35 +1,38 @@
 # frozen_string_literal: true
 
 require_relative "atom"
-require_relative "atomic_boolean"
 
 module AtomicRuby
   class AtomicThreadPool
-    class UnsupportedWorkTypeError < StandardError; end
-    class InvalidWorkQueueingError < StandardError; end
+    class Error < StandardError; end
+
+    class EnqueuedWorkAfterShutdownError < Error
+      def message = "cannot queue work after shutdown"
+    end
 
     def initialize(size:, name: nil)
+      raise ArgumentError, "size must be a positive Integer" unless size.is_a?(Integer) && size > 0
+      raise ArgumentError, "name must be a String" unless name.nil? || name.is_a?(String)
+
       @size = size
       @name = name
-      @queue = Atom.new([])
-      @threads = []
+
+      @state = Atom.new(queue: [], shutdown: false)
       @started_threads = Atom.new(0)
-      @stopping = AtomicBoolean.new(false)
+      @threads = []
 
       start
     end
 
     def <<(work)
-      unless work.is_a?(Proc) || work == :stop
-        raise UnsupportedWorkTypeError, "expected work to be a `Proc`, got #{work.class}"
+      state = @state.swap do |current_state|
+        if current_state[:shutdown]
+          current_state
+        else
+          current_state.merge(queue: [*current_state[:queue], work])
+        end
       end
-
-      if @stopping.true?
-        raise InvalidWorkQueueingError, "cannot queue work during or after pool shutdown"
-      end
-
-      @queue.swap { |current_queue| current_queue += [work] }
-      true
+      raise EnqueuedWorkAfterShutdownError if state[:shutdown]
     end
 
     def length
@@ -37,20 +40,31 @@ module AtomicRuby
     end
 
     def queue_length
-      @queue.value.length
+      @state.value[:queue].length
     end
 
     def shutdown
-      self << :stop
+      already_shutdown = false
+      @state.swap do |current_state|
+        if current_state[:shutdown]
+          already_shutdown = true
+          current_state
+        else
+          current_state.merge(shutdown: true)
+        end
+      end
+      return if already_shutdown
+
+      Thread.pass until @state.value[:queue].empty?
+
       @threads.each(&:join)
-      true
     end
 
     private
 
     def start
-      @threads = @size.times.map do |num|
-        Thread.new(num) do |idx|
+      @size.times do |num|
+        @threads << Thread.new(num) do |idx|
           thread_name = String.new("AtomicThreadPool thread #{idx}")
           thread_name << " for #{@name}" if @name
           Thread.current.name = thread_name
@@ -59,9 +73,23 @@ module AtomicRuby
 
           loop do
             work = nil
-            @queue.swap { |current_queue| work = current_queue.last; current_queue[0..-2] }
-            case work
-            when Proc
+            should_shutdown = false
+
+            @state.swap do |current_state|
+              if current_state[:shutdown] && current_state[:queue].empty?
+                should_shutdown = true
+                current_state
+              elsif current_state[:queue].empty?
+                current_state
+              else
+                work = current_state[:queue].first
+                current_state.merge(queue: current_state[:queue].drop(1))
+              end
+            end
+
+            if should_shutdown
+              break
+            elsif work
               begin
                 work.call
               rescue => err
@@ -69,18 +97,13 @@ module AtomicRuby
                 puts "#{err.class}: #{err.message}"
                 puts err.backtrace.join("\n")
               end
-            when :stop
-              @stopping.make_true
-            when NilClass
-              if @stopping.true?
-                break
-              else
-                Thread.pass
-              end
+            else
+              Thread.pass
             end
           end
         end
       end
+      @threads.freeze
 
       Thread.pass until @started_threads.value == @size
     end

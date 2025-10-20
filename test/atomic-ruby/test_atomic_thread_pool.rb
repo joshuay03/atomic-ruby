@@ -27,7 +27,7 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal 0, Thread.list.count { |thread| thread.name =~ /AtomicThreadPool thread \d+ for Test Pool/ }
   end
 
-  def test_queue
+  def test_enqueue
     results = []
     pool = AtomicThreadPool.new(size: 2)
     5.times { |idx| pool << ->{ results << idx + 1 } }
@@ -35,23 +35,15 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal [1, 2, 3, 4, 5], results.sort
   end
 
-  def test_queue_with_invalid_work
-    pool = AtomicThreadPool.new(size: 2)
-    assert_raises AtomicThreadPool::UnsupportedWorkTypeError do
-      pool << 1
-    end
-    pool.shutdown
-  end
-
-  def test_queue_after_shutdown
+  def test_enqueue_after_shutdown
     pool = AtomicThreadPool.new(size: 2)
     pool.shutdown
-    assert_raises AtomicThreadPool::InvalidWorkQueueingError do
+    assert_raises AtomicThreadPool::EnqueuedWorkAfterShutdownError do
       pool << -> {}
     end
   end
 
-  def test_queue_error_raising_work
+  def test_enqueue_error_raising_work
     pool = AtomicThreadPool.new(size: 2)
     out, _err = capture_io do
       pool << -> { raise "oops" }
@@ -68,7 +60,7 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal 0, pool.length
   end
 
-  def test_queue_length
+  def test_enqueue_length
     pool = AtomicThreadPool.new(size: 2)
     5.times { pool << -> { sleep 1 } }
     assert_equal 5, pool.queue_length

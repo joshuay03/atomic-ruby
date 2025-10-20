@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Improve thread safety, performance, and error handling across atomic classes
+
 ## [0.6.6] - 2025-10-16
 
 - Fix individual file requires

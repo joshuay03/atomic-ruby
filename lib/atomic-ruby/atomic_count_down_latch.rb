@@ -4,12 +4,12 @@ require_relative "atom"
 
 module AtomicRuby
   class AtomicCountDownLatch
-    class InvalidCountError < StandardError; end
-    class AlreadyCountedDownError < StandardError; end
+    class Error < StandardError; end
+    class AlreadyCountedDownError < Error; end
 
     def initialize(count)
-      unless count.is_a?(Integer)
-        raise InvalidCountError, "expected count to be an `Integer`, got #{count.class}"
+      unless count.is_a?(Integer) && count > 0
+        raise ArgumentError, "count must be a positive Integer, got #{count.class}"
       end
 
       @count = Atom.new(count)
@@ -22,11 +22,18 @@ module AtomicRuby
     end
 
     def count_down
-      unless @count.value > 0
-        raise AlreadyCountedDownError, "count has already reached zero"
+      already_counted_down = false
+      new_count = @count.swap do |current_count|
+        if current_count == 0
+          already_counted_down = true
+          current_count
+        else
+          current_count - 1
+        end
       end
-
-      @count.swap { |current_value| current_value - 1 }
+      raise AlreadyCountedDownError, "already counted down to zero" if already_counted_down
+      
+      new_count
     end
 
     def wait
