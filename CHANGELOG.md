@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix O(n) performance issue in `AtomicThreadPool#<<` by using linked list
+
 ## [0.7.0] - 2025-10-20
 
 - Improve thread safety, performance, and error handling across atomic classes

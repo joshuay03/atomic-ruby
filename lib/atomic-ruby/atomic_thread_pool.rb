@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "atom"
+require_relative "linked_list"
 
 module AtomicRuby
   class AtomicThreadPool
@@ -17,7 +18,7 @@ module AtomicRuby
       @size = size
       @name = name
 
-      @state = Atom.new(queue: [], shutdown: false)
+      @state = Atom.new(queue: LinkedList.new, shutdown: false)
       @started_threads = Atom.new(0)
       @threads = []
 
@@ -29,7 +30,7 @@ module AtomicRuby
         if current_state[:shutdown]
           current_state
         else
-          current_state.merge(queue: [*current_state[:queue], work])
+          current_state.merge(queue: current_state[:queue].prepend(work))
         end
       end
       raise EnqueuedWorkAfterShutdownError if state[:shutdown]
@@ -83,7 +84,7 @@ module AtomicRuby
                 current_state
               else
                 work = current_state[:queue].first
-                current_state.merge(queue: current_state[:queue].drop(1))
+                current_state.merge(queue: current_state[:queue].rest)
               end
             end
 
