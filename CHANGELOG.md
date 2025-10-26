@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.7.1] - 2025-10-26
+
 - Fix O(n) performance issue in `AtomicThreadPool#<<` by using linked list
 
 ## [0.7.0] - 2025-10-20
