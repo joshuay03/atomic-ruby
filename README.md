@@ -384,8 +384,8 @@ concurrent-ruby version: 1.3.5
 atomic-ruby version:     0.7.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    4.802586 seconds
-Atomic Ruby Atomic Thread Pool: 4.466127 seconds
+Concurrent Ruby Thread Pool:    5.30284 seconds
+Atomic Ruby Atomic Thread Pool: 5.019147 seconds
 ```
 
 </details>
