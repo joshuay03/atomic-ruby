@@ -41,9 +41,16 @@ static VALUE rb_cAtom_allocate(VALUE klass) {
   return obj;
 }
 
+static void check_value_shareable(VALUE val) {
+  if (!rb_ractor_shareable_p(val)) {
+    rb_raise(rb_eArgError, "only shareable objects are allowed");
+  }
+}
+
 static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
+  check_value_shareable(value);
   RB_OBJ_WRITE(self, &atomic_ruby_atom->value, value);
   return self;
 }
@@ -62,6 +69,7 @@ static VALUE rb_cAtom_swap(VALUE self) {
   do {
     expected_old_value = atomic_ruby_atom->value;
     new_value = rb_yield(expected_old_value);
+    check_value_shareable(new_value);
   } while (RUBY_ATOMIC_VALUE_CAS(atomic_ruby_atom->value, expected_old_value, new_value) != expected_old_value);
   RB_OBJ_WRITTEN(self, expected_old_value, new_value);
 

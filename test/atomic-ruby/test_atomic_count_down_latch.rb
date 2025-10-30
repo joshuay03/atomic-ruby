@@ -61,7 +61,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     latch = AtomicCountDownLatch.new(5)
     pool = AtomicThreadPool.new(size: 2)
     5.times do
-      pool << -> {
+      pool << Ractor.shareable_proc {
         sleep 0.1
         latch.count_down
       }

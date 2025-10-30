@@ -25,7 +25,9 @@ class TestAtom < Minitest::Test
     atom = Atom.new(0)
     ractors = 10.times.map do
       Ractor.new(atom) do |shared_atom|
-        shared_atom.swap { |current| current + 1 }
+        shared_atom.swap { |current|
+          current + 1
+        }
       end
     end
     RUBY_VERSION >= "3.5" ? ractors.each(&:value) : ractors.each(&:take)

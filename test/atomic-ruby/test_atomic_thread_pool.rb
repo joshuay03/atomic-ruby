@@ -28,10 +28,11 @@ class TestAtomicThreadPool < Minitest::Test
   end
 
   def test_enqueue
-    results = []
+    result_port = Ractor::Port.new
     pool = AtomicThreadPool.new(size: 2)
-    5.times { |idx| pool << ->{ results << idx + 1 } }
+    5.times { |idx| pool << Ractor.shareable_proc { result_port << idx + 1 } }
     pool.shutdown
+    results = 5.times.map { result_port.receive }
     assert_equal [1, 2, 3, 4, 5], results.sort
   end
 
@@ -46,7 +47,7 @@ class TestAtomicThreadPool < Minitest::Test
   def test_enqueue_error_raising_work
     pool = AtomicThreadPool.new(size: 2)
     out, _err = capture_io do
-      pool << -> { raise "oops" }
+      pool << Ractor.shareable_proc { raise "oops" }
       sleep 1
     end
     assert_match(/AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out)
@@ -62,7 +63,7 @@ class TestAtomicThreadPool < Minitest::Test
 
   def test_enqueue_length
     pool = AtomicThreadPool.new(size: 2)
-    5.times { pool << -> { sleep 1 } }
+    5.times { pool << Ractor.shareable_proc { sleep 1 } }
     assert_operator pool.queue_length, :>=, 3
     pool.shutdown
     assert_equal 0, pool.queue_length
