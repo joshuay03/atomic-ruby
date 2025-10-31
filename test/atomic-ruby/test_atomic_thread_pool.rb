@@ -9,10 +9,12 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal 0, pool.queue_length
   end
 
-  def test_not_shareable
-    pool = AtomicThreadPool.new(size: 2)
-    refute Ractor.shareable?(pool)
-    pool.shutdown
+  if AtomicRuby::RACTOR_SAFE
+    def test_not_shareable
+      pool = AtomicThreadPool.new(size: 2)
+      refute Ractor.shareable?(pool)
+      pool.shutdown
+    end
   end
 
   def test_start
@@ -27,26 +29,37 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal 0, Thread.list.count { |thread| thread.name =~ /AtomicThreadPool thread \d+ for Test Pool/ }
   end
 
-  def test_enqueue
-    results = []
-    pool = AtomicThreadPool.new(size: 2)
-    5.times { |idx| pool << ->{ results << idx + 1 } }
-    pool.shutdown
-    assert_equal [1, 2, 3, 4, 5], results.sort
+  if AtomicRuby::RACTOR_SAFE
+    def test_enqueue
+      result_port = Ractor::Port.new
+      pool = AtomicThreadPool.new(size: 2)
+      5.times { |idx| pool << Ractor.shareable_proc { result_port << idx + 1 } }
+      pool.shutdown
+      results = 5.times.map { result_port.receive }
+      assert_equal [1, 2, 3, 4, 5], results.sort
+    end
+  else
+    def test_enqueue
+      results = []
+      pool = AtomicThreadPool.new(size: 2)
+      5.times { |idx| pool << proc { results << idx + 1 } }
+      pool.shutdown
+      assert_equal [1, 2, 3, 4, 5], results.sort
+    end
   end
 
   def test_enqueue_after_shutdown
     pool = AtomicThreadPool.new(size: 2)
     pool.shutdown
     assert_raises AtomicThreadPool::EnqueuedWorkAfterShutdownError do
-      pool << -> {}
+      pool << shareable_proc {}
     end
   end
 
   def test_enqueue_error_raising_work
     pool = AtomicThreadPool.new(size: 2)
     out, _err = capture_io do
-      pool << -> { raise "oops" }
+      pool << shareable_proc { raise "oops" }
       sleep 1
     end
     assert_match(/AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out)
@@ -62,9 +75,19 @@ class TestAtomicThreadPool < Minitest::Test
 
   def test_enqueue_length
     pool = AtomicThreadPool.new(size: 2)
-    5.times { pool << -> { sleep 1 } }
+    5.times { pool << shareable_proc { sleep 1 } }
     assert_operator pool.queue_length, :>=, 3
     pool.shutdown
     assert_equal 0, pool.queue_length
+  end
+
+  private
+
+  def shareable_proc(&work)
+    if AtomicRuby::RACTOR_SAFE
+      Ractor.shareable_proc(&work)
+    else
+      work
+    end
   end
 end

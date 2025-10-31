@@ -31,7 +31,11 @@ static const rb_data_type_t atomic_ruby_atom_type = {
     .dsize = atomic_ruby_atom_memsize,
     .dcompact = atomic_ruby_atom_compact
   },
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
   .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED | RUBY_TYPED_FROZEN_SHAREABLE
+#else
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED
+#endif
 };
 
 static VALUE rb_cAtom_allocate(VALUE klass) {
@@ -41,9 +45,20 @@ static VALUE rb_cAtom_allocate(VALUE klass) {
   return obj;
 }
 
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
+static void check_value_shareable(VALUE value) {
+  if (!rb_ractor_shareable_p(value)) {
+    rb_raise(rb_eArgError, "value must be a shareable object");
+  }
+}
+#endif
+
 static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
+  check_value_shareable(value);
+#endif
   RB_OBJ_WRITE(self, &atomic_ruby_atom->value, value);
   return self;
 }
@@ -62,6 +77,9 @@ static VALUE rb_cAtom_swap(VALUE self) {
   do {
     expected_old_value = atomic_ruby_atom->value;
     new_value = rb_yield(expected_old_value);
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
+    check_value_shareable(new_value);
+#endif
   } while (RUBY_ATOMIC_VALUE_CAS(atomic_ruby_atom->value, expected_old_value, new_value) != expected_old_value);
   RB_OBJ_WRITTEN(self, expected_old_value, new_value);
 
@@ -69,7 +87,7 @@ static VALUE rb_cAtom_swap(VALUE self) {
 }
 
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
-#ifdef HAVE_RB_EXT_RACTOR_SAFE
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
   rb_ext_ractor_safe(true);
 #endif
 
@@ -80,4 +98,10 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
   rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
   rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
+
+#ifdef ATOMIC_RUBY_RACTOR_SAFE
+  rb_define_const(rb_mAtomicRuby, "RACTOR_SAFE", Qtrue);
+#else
+  rb_define_const(rb_mAtomicRuby, "RACTOR_SAFE", Qfalse);
+#endif
 }

@@ -11,7 +11,7 @@ module AtomicRuby
 
       @boolean = Atom.new(boolean)
 
-      Ractor.make_shareable(self)
+      Ractor.make_shareable(self) if RACTOR_SAFE
     end
 
     def value

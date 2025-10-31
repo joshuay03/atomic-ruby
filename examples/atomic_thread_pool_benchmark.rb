@@ -14,11 +14,11 @@ results = []
     end
 
     100.times do
-      pool << -> { sleep(0.2) }
+      pool << proc { sleep(0.2) }
     end
 
     100.times do
-      pool << -> { 1_000_000.times.map(&:itself).sum }
+      pool << proc { 1_000_000.times.map(&:itself).sum }
     end
 
     pool.shutdown

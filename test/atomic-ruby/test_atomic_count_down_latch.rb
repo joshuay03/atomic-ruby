@@ -8,9 +8,11 @@ class TestAtomicCountDownLatch < Minitest::Test
     assert_equal 5, latch.count
   end
 
-  def test_shareable
-    latch = AtomicCountDownLatch.new(5)
-    assert Ractor.shareable?(latch)
+  if AtomicRuby::RACTOR_SAFE
+    def test_shareable
+      latch = AtomicCountDownLatch.new(5)
+      assert Ractor.shareable?(latch)
+    end
   end
 
   def test_with_invalid_count
@@ -38,15 +40,17 @@ class TestAtomicCountDownLatch < Minitest::Test
     end
   end
 
-  def test_count_down_in_ractor
-    latch = AtomicCountDownLatch.new(10)
-    ractors = 10.times.map do
-      Ractor.new(latch) do |shared_latch|
-        shared_latch.count_down
+  if AtomicRuby::RACTOR_SAFE
+    def test_count_down_in_ractor
+      latch = AtomicCountDownLatch.new(10)
+      ractors = 10.times.map do
+        Ractor.new(latch) do |shared_latch|
+          shared_latch.count_down
+        end
       end
+      ractors.each(&:value)
+      assert_equal 0, latch.count
     end
-    RUBY_VERSION >= "3.5" ? ractors.each(&:value) : ractors.each(&:take)
-    assert_equal 0, latch.count
   end
 
   def test_wait
@@ -61,7 +65,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     latch = AtomicCountDownLatch.new(5)
     pool = AtomicThreadPool.new(size: 2)
     5.times do
-      pool << -> {
+      pool << shareable_proc {
         sleep 0.1
         latch.count_down
       }
@@ -70,24 +74,31 @@ class TestAtomicCountDownLatch < Minitest::Test
     assert_equal 0, latch.count
   end
 
-  def test_wait_in_ractor
-    latch = AtomicCountDownLatch.new(5)
-    countdown_ractors = 5.times.map do
-      Ractor.new(latch) do |shared_latch|
-        shared_latch.count_down
+  if AtomicRuby::RACTOR_SAFE
+    def test_wait_in_ractor
+      latch = AtomicCountDownLatch.new(5)
+      countdown_ractors = 5.times.map do
+        Ractor.new(latch) do |shared_latch|
+          shared_latch.count_down
+        end
       end
-    end
-    wait_ractor = Ractor.new(latch) do |shared_latch|
-      shared_latch.wait
-      shared_latch.count
-    end
-    result = if RUBY_VERSION >= "3.5"
+      wait_ractor = Ractor.new(latch) do |shared_latch|
+        shared_latch.wait
+        shared_latch.count
+      end
       countdown_ractors.each(&:value)
-      wait_ractor.value
-    else
-      countdown_ractors.each(&:take)
-      wait_ractor.take
+      result = wait_ractor.value
+      assert_equal 0, result
     end
-    assert_equal 0, result
+  end
+
+  private
+
+  def shareable_proc(&work)
+    if AtomicRuby::RACTOR_SAFE
+      Ractor.shareable_proc(&work)
+    else
+      work
+    end
   end
 end
