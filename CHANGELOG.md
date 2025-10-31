@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Fix Ractor safety
 - Make `ArgumentError` messages consistent
 - Implement write barriers for `Atom`
 
