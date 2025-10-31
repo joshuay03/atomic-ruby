@@ -8,7 +8,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     assert_equal 5, latch.count
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_shareable
       latch = AtomicCountDownLatch.new(5)
       assert Ractor.shareable?(latch)
@@ -40,7 +40,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     end
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_count_down_in_ractor
       latch = AtomicCountDownLatch.new(10)
       ractors = 10.times.map do
@@ -65,7 +65,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     latch = AtomicCountDownLatch.new(5)
     pool = AtomicThreadPool.new(size: 2)
     5.times do
-      pool << work_proc {
+      pool << shareable_proc {
         sleep 0.1
         latch.count_down
       }
@@ -74,7 +74,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     assert_equal 0, latch.count
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_wait_in_ractor
       latch = AtomicCountDownLatch.new(5)
       countdown_ractors = 5.times.map do
@@ -94,8 +94,8 @@ class TestAtomicCountDownLatch < Minitest::Test
 
   private
 
-  def work_proc(&work)
-    if RUBY_VERSION >= "3.5"
+  def shareable_proc(&work)
+    if AtomicRuby::RACTOR_SAFE
       Ractor.shareable_proc(&work)
     else
       work

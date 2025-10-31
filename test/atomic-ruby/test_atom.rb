@@ -8,10 +8,22 @@ class TestAtom < Minitest::Test
     assert_equal 0, atom.value
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_shareable
       atom = Atom.new(0)
       assert Ractor.shareable?(atom)
+    end
+
+    def test_not_shareable_init
+      assert_raises Ractor::IsolationError do
+        Atom.new(proc { })
+      end
+    end
+
+    def test_shareable_init
+      proc = Ractor.shareable_proc { }
+      atom = Atom.new(proc)
+      assert_equal proc, atom.value
     end
   end
 
@@ -23,7 +35,7 @@ class TestAtom < Minitest::Test
     assert_equal 2, atom.value
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_swap_in_ractor
       atom = Atom.new(0)
       ractors = 10.times.map do

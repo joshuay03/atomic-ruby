@@ -3,14 +3,11 @@
 require "atomic_ruby/atomic_ruby"
 
 module AtomicRuby
-  RACTOR_SHAREABLE_PROC = Ractor.respond_to?(:shareable_proc)
-  private_constant :RACTOR_SHAREABLE_PROC
-
   class Atom
     def initialize(value)
       _initialize(make_shareable(value))
 
-      freeze
+      freeze if RACTOR_SAFE
     end
 
     def value
@@ -26,7 +23,7 @@ module AtomicRuby
     private
 
     def make_shareable(value)
-      if RACTOR_SHAREABLE_PROC
+      if RACTOR_SAFE
         Ractor.make_shareable(value)
       else
         value

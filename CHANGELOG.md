@@ -1,6 +1,6 @@
 ## [Unreleased]
 
-- Fix Ractor safety
+- Fix Ractor safety (requires Ruby 3.5+)
 - Make `ArgumentError` messages consistent
 - Implement write barriers for `Atom`
 

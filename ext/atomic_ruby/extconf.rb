@@ -7,8 +7,4 @@ require "mkmf"
 # selectively, or entirely remove this flag.
 append_cflags("-fvisibility=hidden")
 
-if Ractor.respond_to?(:shareable_proc)
-  $defs << "-DHAVE_RACTOR_SHAREABLE_PROC"
-end
-
 create_makefile("atomic_ruby/atomic_ruby")

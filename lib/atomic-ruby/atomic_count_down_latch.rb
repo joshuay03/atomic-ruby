@@ -14,7 +14,7 @@ module AtomicRuby
 
       @count = Atom.new(count)
 
-      freeze
+      Ractor.make_shareable(self) if RACTOR_SAFE
     end
 
     def count

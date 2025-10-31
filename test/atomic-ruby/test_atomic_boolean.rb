@@ -9,7 +9,7 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :false?
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_shareable
       boolean = AtomicBoolean.new(true)
       assert Ractor.shareable?(boolean)
@@ -23,7 +23,7 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :true?
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_make_true_in_ractor
       boolean = AtomicBoolean.new(false)
       ractors = 10.times.map do
@@ -44,7 +44,7 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :false?
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_make_false_in_ractor
       boolean = AtomicBoolean.new(true)
       ractors = 10.times.map do
@@ -65,7 +65,7 @@ class TestAtomicBoolean < Minitest::Test
     assert_predicate boolean, :false?
   end
 
-  if RUBY_VERSION >= "3.5"
+  if AtomicRuby::RACTOR_SAFE
     def test_toggle_in_ractor
       boolean = AtomicBoolean.new(true)
       ractors = 10.times.map do
