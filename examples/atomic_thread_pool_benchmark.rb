@@ -4,6 +4,14 @@ require "benchmark"
 require "concurrent-ruby"
 require_relative "../lib/atomic-ruby"
 
+def shareable_proc(&block)
+  if AtomicRuby::RACTOR_SAFE
+    Ractor.shareable_proc(&block)
+  else
+    block
+  end
+end
+
 results = []
 
 2.times do |idx|
@@ -14,11 +22,11 @@ results = []
     end
 
     100.times do
-      pool << proc { sleep(0.2) }
+      pool << shareable_proc { sleep(0.2) }
     end
 
     100.times do
-      pool << proc { 1_000_000.times.map(&:itself).sum }
+      pool << shareable_proc { 1_000_000.times.map(&:itself).sum }
     end
 
     pool.shutdown
