@@ -41,16 +41,20 @@ static VALUE rb_cAtom_allocate(VALUE klass) {
   return obj;
 }
 
+#ifdef HAVE_RACTOR_SHAREABLE_PROC
 static void check_value_shareable(VALUE value) {
   if (!rb_ractor_shareable_p(value)) {
     rb_raise(rb_eArgError, "value must be a shareable object");
   }
 }
+#endif
 
 static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
+#ifdef HAVE_RACTOR_SHAREABLE_PROC
   check_value_shareable(value);
+#endif
   RB_OBJ_WRITE(self, &atomic_ruby_atom->value, value);
   return self;
 }
@@ -69,7 +73,9 @@ static VALUE rb_cAtom_swap(VALUE self) {
   do {
     expected_old_value = atomic_ruby_atom->value;
     new_value = rb_yield(expected_old_value);
+#ifdef HAVE_RACTOR_SHAREABLE_PROC
     check_value_shareable(new_value);
+#endif
   } while (RUBY_ATOMIC_VALUE_CAS(atomic_ruby_atom->value, expected_old_value, new_value) != expected_old_value);
   RB_OBJ_WRITTEN(self, expected_old_value, new_value);
 
@@ -77,7 +83,7 @@ static VALUE rb_cAtom_swap(VALUE self) {
 }
 
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
-#ifdef HAVE_RB_EXT_RACTOR_SAFE
+#if defined(HAVE_RB_EXT_RACTOR_SAFE) && defined(HAVE_RACTOR_SHAREABLE_PROC)
   rb_ext_ractor_safe(true);
 #endif
 
