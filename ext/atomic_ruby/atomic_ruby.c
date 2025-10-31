@@ -31,20 +31,20 @@ static const rb_data_type_t atomic_ruby_atom_type = {
     .dsize = atomic_ruby_atom_memsize,
     .dcompact = atomic_ruby_atom_compact
   },
-  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_FROZEN_SHAREABLE
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED | RUBY_TYPED_FROZEN_SHAREABLE
 };
 
 static VALUE rb_cAtom_allocate(VALUE klass) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   VALUE obj = TypedData_Make_Struct(klass, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
-  atomic_ruby_atom->value = Qnil;
+  RB_OBJ_WRITE(obj, &atomic_ruby_atom->value, Qnil);
   return obj;
 }
 
 static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   atomic_ruby_atom_t *atomic_ruby_atom;
   TypedData_Get_Struct(self, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
-  atomic_ruby_atom->value = value;
+  RB_OBJ_WRITE(self, &atomic_ruby_atom->value, value);
   return self;
 }
 
@@ -63,6 +63,7 @@ static VALUE rb_cAtom_swap(VALUE self) {
     expected_old_value = atomic_ruby_atom->value;
     new_value = rb_yield(expected_old_value);
   } while (RUBY_ATOMIC_VALUE_CAS(atomic_ruby_atom->value, expected_old_value, new_value) != expected_old_value);
+  RB_OBJ_WRITTEN(self, expected_old_value, new_value);
 
   return new_value;
 }
