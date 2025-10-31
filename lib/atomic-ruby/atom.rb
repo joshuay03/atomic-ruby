@@ -15,7 +15,9 @@ module AtomicRuby
     end
 
     def swap(&block)
-      _swap { |old_value| Ractor.make_shareable(yield(old_value)) }
+      _swap do |old_value|
+        Ractor.make_shareable(block.call(old_value))
+      end
     end
   end
 end

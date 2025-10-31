@@ -41,9 +41,9 @@ static VALUE rb_cAtom_allocate(VALUE klass) {
   return obj;
 }
 
-static void check_value_shareable(VALUE val) {
-  if (!rb_ractor_shareable_p(val)) {
-    rb_raise(rb_eArgError, "only shareable objects are allowed");
+static void check_value_shareable(VALUE value) {
+  if (!rb_ractor_shareable_p(value)) {
+    rb_raise(rb_eArgError, "value must be a shareable object");
   }
 }
 
