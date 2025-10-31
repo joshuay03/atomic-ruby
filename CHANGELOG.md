@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Make `ArgumentError` messages consistent
 - Implement write barriers for `Atom`
 
 ## [0.7.2] - 2025-10-26

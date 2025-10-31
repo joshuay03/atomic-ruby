@@ -9,7 +9,7 @@ module AtomicRuby
 
     def initialize(count)
       unless count.is_a?(Integer) && count > 0
-        raise ArgumentError, "count must be a positive Integer, got #{count.class}"
+        raise ArgumentError, "count must be a positive Integer"
       end
 
       @count = Atom.new(count)
@@ -32,7 +32,7 @@ module AtomicRuby
         end
       end
       raise AlreadyCountedDownError, "already counted down to zero" if already_counted_down
-      
+
       new_count
     end
 

@@ -6,7 +6,7 @@ module AtomicRuby
   class AtomicBoolean
     def initialize(boolean)
       unless boolean.is_a?(TrueClass) || boolean.is_a?(FalseClass)
-        raise ArgumentError, "boolean must be a TrueClass or FalseClass, got #{boolean.class}"
+        raise ArgumentError, "boolean must be a TrueClass or FalseClass"
       end
 
       @boolean = Atom.new(boolean)
