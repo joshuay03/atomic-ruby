@@ -392,11 +392,11 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 
 ruby version:            ruby 3.5.0dev (2025-10-31T18:08:15Z master 980e18496e) +YJIT +PRISM [arm64-darwin25]
 concurrent-ruby version: 1.3.5
-atomic-ruby version:     0.8.0
+atomic-ruby version:     0.8.1
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.13772 seconds
-Atomic Ruby Atomic Thread Pool: 4.893086 seconds
+Concurrent Ruby Thread Pool:    5.139026 seconds
+Atomic Ruby Atomic Thread Pool: 4.833597 seconds
 ```
 
 </details>

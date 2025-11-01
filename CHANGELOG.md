@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.8.1] - 2025-11-01
+
 - Don't require `AtomicThreadPool#<<` to be given a shareable proc
 
 ## [0.8.0] - 2025-11-01
