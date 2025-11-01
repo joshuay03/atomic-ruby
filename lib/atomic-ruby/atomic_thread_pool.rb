@@ -17,7 +17,8 @@ module AtomicRuby
       @size = size
       @name = name
 
-      @state = Atom.new(queue: [], shutdown: false)
+      @queue = Queue.new
+      @state = Atom.new(shutdown: false)
       @started_threads = Atom.new(0)
       @threads = []
 
@@ -26,11 +27,8 @@ module AtomicRuby
 
     def <<(work)
       state = @state.swap do |current_state|
-        if current_state[:shutdown]
-          current_state
-        else
-          current_state.merge(queue: [*current_state[:queue], work])
-        end
+        @queue.push(work) unless current_state[:shutdown]
+        current_state
       end
       raise EnqueuedWorkAfterShutdownError if state[:shutdown]
     end
@@ -40,7 +38,7 @@ module AtomicRuby
     end
 
     def queue_length
-      @state.value[:queue].length
+      @queue.size
     end
 
     def shutdown
@@ -55,7 +53,7 @@ module AtomicRuby
       end
       return if already_shutdown
 
-      Thread.pass until @state.value[:queue].empty?
+      Thread.pass until @queue.empty?
 
       @threads.each(&:join)
     end
@@ -76,15 +74,12 @@ module AtomicRuby
             should_shutdown = false
 
             @state.swap do |current_state|
-              if current_state[:shutdown] && current_state[:queue].empty?
+              if current_state[:shutdown] && @queue.empty?
                 should_shutdown = true
-                current_state
-              elsif current_state[:queue].empty?
-                current_state
               else
-                work = current_state[:queue].first
-                current_state.merge(queue: current_state[:queue].drop(1))
+                work = @queue.pop(timeout: 0)
               end
+              current_state
             end
 
             if should_shutdown

@@ -65,7 +65,7 @@ class TestAtomicCountDownLatch < Minitest::Test
     latch = AtomicCountDownLatch.new(5)
     pool = AtomicThreadPool.new(size: 2)
     5.times do
-      pool << shareable_proc {
+      pool << proc {
         sleep 0.1
         latch.count_down
       }
@@ -89,16 +89,6 @@ class TestAtomicCountDownLatch < Minitest::Test
       countdown_ractors.each(&:value)
       result = wait_ractor.value
       assert_equal 0, result
-    end
-  end
-
-  private
-
-  def shareable_proc(&work)
-    if AtomicRuby::RACTOR_SAFE
-      Ractor.shareable_proc(&work)
-    else
-      work
     end
   end
 end

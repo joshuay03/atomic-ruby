@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Don't require `AtomicThreadPool#<<` to be given a shareable proc
+
 ## [0.8.0] - 2025-11-01
 
 - Fix Ractor safety (requires Ruby 3.5+)
