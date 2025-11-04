@@ -36,10 +36,12 @@ module AtomicRuby
     def length
       @threads.select(&:alive?).length
     end
+    alias size length
 
     def queue_length
       @queue.size
     end
+    alias queue_size queue_length
 
     def shutdown
       already_shutdown = false

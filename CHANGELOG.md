@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add `AtomicThreadPool#size` and `AtomicThreadPool#queue_size` aliases
+
 ## [0.8.1] - 2025-11-01
 
 - Don't require `AtomicThreadPool#<<` to be given a shareable proc

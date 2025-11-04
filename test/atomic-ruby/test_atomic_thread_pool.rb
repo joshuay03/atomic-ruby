@@ -6,7 +6,9 @@ class TestAtomicThreadPool < Minitest::Test
   def test_init
     pool = AtomicThreadPool.new(size: 2)
     assert_equal 2, pool.length
+    assert_equal pool.length, pool.size
     assert_equal 0, pool.queue_length
+    assert_equal pool.queue_length, pool.queue_size
   end
 
   if AtomicRuby::RACTOR_SAFE
@@ -58,15 +60,19 @@ class TestAtomicThreadPool < Minitest::Test
   def test_length
     pool = AtomicThreadPool.new(size: 2)
     assert_equal 2, pool.length
+    assert_equal pool.length, pool.size
     pool.shutdown
     assert_equal 0, pool.length
+    assert_equal pool.length, pool.size
   end
 
-  def test_enqueue_length
+  def test_queue_length
     pool = AtomicThreadPool.new(size: 2)
     5.times { pool << proc { sleep 1 } }
     assert_operator pool.queue_length, :>=, 3
+    assert_equal pool.queue_size, pool.queue_length
     pool.shutdown
     assert_equal 0, pool.queue_length
+    assert_equal pool.queue_size, pool.queue_length
   end
 end
