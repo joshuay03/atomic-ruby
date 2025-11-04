@@ -38,13 +38,6 @@ static const rb_data_type_t atomic_ruby_atom_type = {
 #endif
 };
 
-static VALUE rb_cAtom_allocate(VALUE klass) {
-  atomic_ruby_atom_t *atomic_ruby_atom;
-  VALUE obj = TypedData_Make_Struct(klass, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
-  RB_OBJ_WRITE(obj, &atomic_ruby_atom->value, Qnil);
-  return obj;
-}
-
 #ifdef ATOMIC_RUBY_RACTOR_SAFE
 static void check_value_shareable(VALUE value) {
   if (!rb_ractor_shareable_p(value)) {
@@ -52,6 +45,13 @@ static void check_value_shareable(VALUE value) {
   }
 }
 #endif
+
+static VALUE rb_cAtom_allocate(VALUE klass) {
+  atomic_ruby_atom_t *atomic_ruby_atom;
+  VALUE obj = TypedData_Make_Struct(klass, atomic_ruby_atom_t, &atomic_ruby_atom_type, atomic_ruby_atom);
+  RB_OBJ_WRITE(obj, &atomic_ruby_atom->value, Qnil);
+  return obj;
+}
 
 static VALUE rb_cAtom_initialize(VALUE self, VALUE value) {
   atomic_ruby_atom_t *atomic_ruby_atom;
