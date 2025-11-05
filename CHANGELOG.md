@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.9.0] - 2025-11-05
+
 - Switch `AtomicThreadPool` back to atomics now that Ractor safety is lazy
 - Don't enforce Ractor safety unless crossing Ractor boundaries
 - Add `AtomicThreadPool#size` and `AtomicThreadPool#queue_size` aliases
