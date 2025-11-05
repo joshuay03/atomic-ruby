@@ -5,9 +5,7 @@ require "atomic_ruby/atomic_ruby"
 module AtomicRuby
   class Atom
     def initialize(value)
-      _initialize(make_shareable(value))
-
-      freeze if RACTOR_SAFE
+      _initialize(value)
     end
 
     def value
@@ -16,14 +14,15 @@ module AtomicRuby
 
     def swap(&block)
       _swap do |old_value|
-        make_shareable(block.call(old_value))
+        make_shareable_if_needed(block.call(old_value))
       end
     end
 
     private
 
-    def make_shareable(value)
-      if RACTOR_SAFE
+    def make_shareable_if_needed(value)
+      if RACTOR_SAFE &&
+         (_initialized_ractor.nil? || Ractor.current != _initialized_ractor)
         Ractor.make_shareable(value)
       else
         value

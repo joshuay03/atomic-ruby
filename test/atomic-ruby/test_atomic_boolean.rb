@@ -7,6 +7,21 @@ class TestAtomicBoolean < Minitest::Test
     boolean = AtomicBoolean.new(false)
     assert_equal false, boolean.value
     assert_predicate boolean, :false?
+    refute_predicate boolean, :true?
+  end
+
+  def test_init_with_invalid_value
+    assert_raises ArgumentError do
+      AtomicBoolean.new(nil)
+    end
+
+    assert_raises ArgumentError do
+      AtomicBoolean.new("true")
+    end
+
+    assert_raises ArgumentError do
+      AtomicBoolean.new(1)
+    end
   end
 
   if AtomicRuby::RACTOR_SAFE
@@ -21,19 +36,18 @@ class TestAtomicBoolean < Minitest::Test
     boolean.make_true
     assert_equal true, boolean.value
     assert_predicate boolean, :true?
+    refute_predicate boolean, :false?
   end
 
   if AtomicRuby::RACTOR_SAFE
-    def test_make_true_in_ractor
+    def test_make_true_cross_ractor
       boolean = AtomicBoolean.new(false)
-      ractors = 10.times.map do
-        Ractor.new(boolean) do |shared_boolean|
-          shared_boolean.make_true
+      10.times.map do
+        Ractor.new(boolean) do |boolean|
+          boolean.make_true
         end
-      end
-      ractors.each(&:value)
+      end.each(&:value)
       assert_equal true, boolean.value
-      assert_predicate boolean, :true?
     end
   end
 
@@ -42,19 +56,18 @@ class TestAtomicBoolean < Minitest::Test
     boolean.make_false
     assert_equal false, boolean.value
     assert_predicate boolean, :false?
+    refute_predicate boolean, :true?
   end
 
   if AtomicRuby::RACTOR_SAFE
-    def test_make_false_in_ractor
+    def test_make_false_cross_ractor
       boolean = AtomicBoolean.new(true)
-      ractors = 10.times.map do
-        Ractor.new(boolean) do |shared_boolean|
-          shared_boolean.make_false
+      10.times.map do
+        Ractor.new(boolean) do |boolean|
+          boolean.make_false
         end
-      end
-      ractors.each(&:value)
+      end.each(&:value)
       assert_equal false, boolean.value
-      assert_predicate boolean, :false?
     end
   end
 
@@ -62,20 +75,19 @@ class TestAtomicBoolean < Minitest::Test
     boolean = AtomicBoolean.new(true)
     boolean.toggle
     assert_equal false, boolean.value
-    assert_predicate boolean, :false?
+    boolean.toggle
+    assert_equal true, boolean.value
   end
 
   if AtomicRuby::RACTOR_SAFE
-    def test_toggle_in_ractor
+    def test_toggle_cross_ractor
       boolean = AtomicBoolean.new(true)
-      ractors = 10.times.map do
-        Ractor.new(boolean) do |shared_boolean|
-          shared_boolean.toggle
+      10.times.map do
+        Ractor.new(boolean) do |boolean|
+          boolean.toggle
         end
-      end
-      ractors.each(&:value)
+      end.each(&:value)
       assert_equal true, boolean.value
-      assert_predicate boolean, :true?
     end
   end
 end

@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Don't enforce Ractor safety unless crossing Ractor boundaries
 - Add `AtomicThreadPool#size` and `AtomicThreadPool#queue_size` aliases
 
 ## [0.8.1] - 2025-11-01

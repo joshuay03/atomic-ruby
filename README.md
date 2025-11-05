@@ -99,17 +99,6 @@ p latch.count #=> 0
 
 > [!NOTE]
 > `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 3.5+.
->
-> When storing procs in atoms, create them using `Ractor.shareable_proc`, as `Ractor.make_shareable`
-> cannot convert regular procs to shareable ones when the proc's context is not shareable.
->
-> ```ruby
-> # This will raise an error in Ruby 3.5+ (proc created in non-shareable context)
-> atom = Atom.new(proc { puts "hello" })
->
-> # Use this instead
-> atom = Atom.new(Ractor.shareable_proc { puts "hello" })
-> ```
 
 ## Benchmarks
 

@@ -11,6 +11,8 @@ gem "rake-compiler"
 
 gem "minitest"
 
+gem "debug"
+
 gem "benchmark"
 gem "benchmark-ips"
 
