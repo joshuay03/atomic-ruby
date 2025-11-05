@@ -9,10 +9,31 @@ class TestAtomicThreadPool < Minitest::Test
     assert_equal pool.length, pool.size
     assert_equal 0, pool.queue_length
     assert_equal pool.queue_length, pool.queue_size
+    pool.shutdown
+  end
+
+  def test_init_with_invalid_size
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 0)
+    end
+
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: -1)
+    end
+
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 2.5)
+    end
+  end
+
+  def test_init_with_invalid_name
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 2, name: 123)
+    end
   end
 
   if AtomicRuby::RACTOR_SAFE
-    def test_not_shareable
+    def test_not_ractor_shareable
       pool = AtomicThreadPool.new(size: 2)
       refute Ractor.shareable?(pool)
       pool.shutdown
@@ -51,7 +72,7 @@ class TestAtomicThreadPool < Minitest::Test
     pool = AtomicThreadPool.new(size: 2)
     out, _err = capture_io do
       pool << proc { raise "oops" }
-      sleep 1
+      sleep 0.1
     end
     assert_match(/AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out)
     pool.shutdown
