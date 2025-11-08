@@ -131,12 +131,12 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   VALUE rb_cAtom = rb_define_class_under(rb_mAtomicRuby, "Atom", rb_cObject);
 
   rb_define_alloc_func(rb_cAtom, rb_cAtom_allocate);
-  rb_define_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
-  rb_define_method(rb_cAtom, "_value", rb_cAtom_value, 0);
-  rb_define_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
+  rb_define_private_method(rb_cAtom, "_initialize", rb_cAtom_initialize, 1);
+  rb_define_private_method(rb_cAtom, "_value", rb_cAtom_value, 0);
+  rb_define_private_method(rb_cAtom, "_swap", rb_cAtom_swap, 0);
 
 #ifdef ATOMIC_RUBY_RACTOR_SAFE
-  rb_define_method(rb_cAtom, "_initialized_ractor", rb_cAtom_initialized_ractor, 0);
+  rb_define_private_method(rb_cAtom, "_initialized_ractor", rb_cAtom_initialized_ractor, 0);
   rb_define_const(rb_mAtomicRuby, "RACTOR_SAFE", Qtrue);
 #else
   rb_define_const(rb_mAtomicRuby, "RACTOR_SAFE", Qfalse);
