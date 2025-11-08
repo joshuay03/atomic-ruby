@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Replace ruby 3.5 references with 4.0
+
 ## [0.9.0] - 2025-11-05
 
 - Switch `AtomicThreadPool` back to atomics now that Ractor safety is lazy
@@ -12,7 +14,7 @@
 
 ## [0.8.0] - 2025-11-01
 
-- Fix Ractor safety (requires Ruby 3.5+)
+- Fix Ractor safety
 - Make `ArgumentError` messages consistent
 - Implement write barriers for `Atom`
 

@@ -98,7 +98,7 @@ p latch.count #=> 0
 ```
 
 > [!NOTE]
-> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 3.5+.
+> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 4.0+.
 
 ## Benchmarks
 

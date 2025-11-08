@@ -5,7 +5,7 @@
 #include "ruby/atomic.h"
 #include "ruby/version.h"
 
-#if RUBY_API_VERSION_CODE >= 30500
+#if RUBY_API_VERSION_CODE >= 40000
 #define ATOMIC_RUBY_RACTOR_SAFE 1
 #include "ruby/ractor.h"
 #endif
