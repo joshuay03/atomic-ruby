@@ -11,6 +11,10 @@ gem "rake-compiler"
 
 gem "minitest"
 
+gem "rbs-inline"
+
+gem "yard"
+
 gem "debug"
 
 gem "benchmark"

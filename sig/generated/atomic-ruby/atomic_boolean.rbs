@@ -1,7 +1,4 @@
-# rbs_inline: enabled
-# frozen_string_literal: true
-
-require_relative "atom"
+# Generated from lib/atomic-ruby/atomic_boolean.rb with RBS::Inline
 
 module AtomicRuby
   # Provides atomic boolean semantics with thread-safe toggle operations.
@@ -45,15 +42,7 @@ module AtomicRuby
     #   AtomicBoolean.new("true")  #=> raises ArgumentError
     #
     # @rbs (bool boolean) -> void
-    def initialize(boolean)
-      unless boolean.is_a?(TrueClass) || boolean.is_a?(FalseClass)
-        raise ArgumentError, "boolean must be a TrueClass or FalseClass"
-      end
-
-      @boolean = Atom.new(boolean)
-
-      Ractor.make_shareable(self) if RACTOR_SAFE
-    end
+    def initialize: (bool boolean) -> void
 
     # Returns the current boolean value stored in the atom.
     #
@@ -68,9 +57,7 @@ module AtomicRuby
     #   puts boolean.value #=> true
     #
     # @rbs () -> bool
-    def value
-      @boolean.value
-    end
+    def value: () -> bool
 
     # Tests if the current value is true.
     #
@@ -82,9 +69,7 @@ module AtomicRuby
     #   puts boolean.false? #=> false
     #
     # @rbs () -> bool
-    def true?
-      value == true
-    end
+    def true?: () -> bool
 
     # Tests if the current value is false.
     #
@@ -96,9 +81,7 @@ module AtomicRuby
     #   puts boolean.true?  #=> false
     #
     # @rbs () -> bool
-    def false?
-      value == false
-    end
+    def false?: () -> bool
 
     # Atomically sets the value to true.
     #
@@ -113,9 +96,7 @@ module AtomicRuby
     #   puts boolean.value #=> true
     #
     # @rbs () -> true
-    def make_true
-      @boolean.swap { true }
-    end
+    def make_true: () -> true
 
     # Atomically sets the value to false.
     #
@@ -130,9 +111,7 @@ module AtomicRuby
     #   puts boolean.value #=> false
     #
     # @rbs () -> false
-    def make_false
-      @boolean.swap { false }
-    end
+    def make_false: () -> false
 
     # Atomically toggles the boolean value.
     #
@@ -151,10 +130,8 @@ module AtomicRuby
     #   10.times.map { Thread.new { boolean.toggle } }.each(&:join)
     #
     # @rbs () -> bool
-    def toggle
-      @boolean.swap { |current_value| !current_value }
-    end
+    def toggle: () -> bool
   end
 end
 
-AtomicBoolean = AtomicRuby::AtomicBoolean
+AtomicBoolean: untyped

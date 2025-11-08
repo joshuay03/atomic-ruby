@@ -1,0 +1,5 @@
+# Generated from lib/atomic-ruby/version.rb with RBS::Inline
+
+module AtomicRuby
+  VERSION: ::String
+end

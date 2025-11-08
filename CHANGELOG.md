@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Add YARD documentation and inline RBS type signatures
 - Replace ruby 3.5 references with 4.0
 
 ## [0.9.0] - 2025-11-05

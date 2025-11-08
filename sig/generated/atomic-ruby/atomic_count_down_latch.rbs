@@ -1,7 +1,4 @@
-# rbs_inline: enabled
-# frozen_string_literal: true
-
-require_relative "atom"
+# Generated from lib/atomic-ruby/atomic_count_down_latch.rb with RBS::Inline
 
 module AtomicRuby
   # Provides a countdown synchronization primitive using atomic operations.
@@ -44,10 +41,12 @@ module AtomicRuby
   #
   # @note This class is Ractor-safe in Ruby 4.0+ when compiled with ractor support.
   class AtomicCountDownLatch
-    class Error < StandardError; end
+    class Error < StandardError
+    end
 
     # Error raised when attempting to count down a latch that is already at zero.
-    class AlreadyCountedDownError < Error; end
+    class AlreadyCountedDownError < Error
+    end
 
     # Creates a new countdown latch with the specified count.
     #
@@ -64,15 +63,7 @@ module AtomicRuby
     #   AtomicCountDownLatch.new(-1)  #=> raises ArgumentError
     #
     # @rbs (Integer count) -> void
-    def initialize(count)
-      unless count.is_a?(Integer) && count > 0
-        raise ArgumentError, "count must be a positive Integer"
-      end
-
-      @count = Atom.new(count)
-
-      Ractor.make_shareable(self) if RACTOR_SAFE
-    end
+    def initialize: (Integer count) -> void
 
     # Returns the current count value.
     #
@@ -89,9 +80,7 @@ module AtomicRuby
     #   puts latch.count #=> 2
     #
     # @rbs () -> Integer
-    def count
-      @count.value
-    end
+    def count: () -> Integer
 
     # Atomically decrements the count by one.
     #
@@ -116,20 +105,7 @@ module AtomicRuby
     #   end
     #
     # @rbs () -> Integer
-    def count_down
-      already_counted_down = false
-      new_count = @count.swap do |current_count|
-        if current_count == 0
-          already_counted_down = true
-          current_count
-        else
-          current_count - 1
-        end
-      end
-      raise AlreadyCountedDownError, "already counted down to zero" if already_counted_down
-
-      new_count
-    end
+    def count_down: () -> Integer
 
     # Blocks the current thread until the count reaches zero.
     #
@@ -165,10 +141,8 @@ module AtomicRuby
     #   puts "All events completed!"
     #
     # @rbs () -> void
-    def wait
-      Thread.pass while @count.value > 0
-    end
+    def wait: () -> void
   end
 end
 
-AtomicCountDownLatch = AtomicRuby::AtomicCountDownLatch
+AtomicCountDownLatch: untyped

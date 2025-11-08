@@ -1,7 +1,4 @@
-# rbs_inline: enabled
-# frozen_string_literal: true
-
-require "atomic_ruby/atomic_ruby"
+# Generated from lib/atomic-ruby/atom.rb with RBS::Inline
 
 module AtomicRuby
   # Provides atomic reference semantics using Compare-And-Swap (CAS) operations.
@@ -42,9 +39,7 @@ module AtomicRuby
     #   atom = Atom.new({ key: "value" })
     #
     # @rbs (untyped value) -> void
-    def initialize(value)
-      _initialize(value)
-    end
+    def initialize: (untyped value) -> void
 
     # Returns the current value stored in the atom.
     #
@@ -59,9 +54,7 @@ module AtomicRuby
     #   puts atom.value #=> "hello"
     #
     # @rbs () -> untyped
-    def value
-      _value
-    end
+    def value: () -> untyped
 
     # Atomically updates the value using a compare-and-swap operation.
     #
@@ -89,11 +82,7 @@ module AtomicRuby
     #   puts atom.value #=> 20
     #
     # @rbs () { (untyped) -> untyped } -> untyped
-    def swap(&block)
-      _swap do |old_value|
-        make_shareable_if_needed(block.call(old_value))
-      end
-    end
+    def swap: () { (untyped) -> untyped } -> untyped
 
     private
 
@@ -106,15 +95,8 @@ module AtomicRuby
     # @return [untyped] The original value or shareable version
     #
     # @rbs (untyped value) -> untyped
-    def make_shareable_if_needed(value)
-      if RACTOR_SAFE &&
-         (_initialized_ractor.nil? || Ractor.current != _initialized_ractor)
-        Ractor.make_shareable(value)
-      else
-        value
-      end
-    end
+    def make_shareable_if_needed: (untyped value) -> untyped
   end
 end
 
-Atom = AtomicRuby::Atom
+Atom: untyped
