@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.10.0] - 2025-11-09
+
 - Add `AtomicThreadPool#active_count`
 - Make native extension methods private
 - Add YARD documentation and inline RBS type signatures
