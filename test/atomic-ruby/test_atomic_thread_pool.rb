@@ -89,10 +89,13 @@ class TestAtomicThreadPool < Minitest::Test
   end
 
   def test_queue_length
+    should_sleep = AtomicBoolean.new(true)
     pool = AtomicThreadPool.new(size: 2)
-    5.times { pool << proc { sleep 1 } }
-    assert_operator pool.queue_length, :>=, 3
+    5.times { pool << proc { sleep 0.1 while should_sleep.true? } }
+    sleep 0.1
+    assert_equal 3, pool.queue_length
     assert_equal pool.queue_size, pool.queue_length
+    should_sleep.make_false
     pool.shutdown
     assert_equal 0, pool.queue_length
     assert_equal pool.queue_size, pool.queue_length
