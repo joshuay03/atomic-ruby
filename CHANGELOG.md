@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Add `AtomicThreadPool#active_count`
 - Make native extension methods private
 - Add YARD documentation and inline RBS type signatures
 - Replace ruby 3.5 references with 4.0

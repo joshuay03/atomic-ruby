@@ -29,11 +29,13 @@ module AtomicRuby
   #
   # @example Monitoring pool state
   #   pool = AtomicThreadPool.new(size: 3)
-  #   puts pool.length       #=> 3
-  #   puts pool.queue_length #=> 0
+  #   puts pool.length        #=> 3
+  #   puts pool.queue_length  #=> 0
+  #   puts pool.active_count  #=> 0
   #
   #   5.times { pool << proc { sleep(1) } }
-  #   puts pool.queue_length #=> 2 (3 workers busy, 2 queued)
+  #   puts pool.queue_length  #=> 2 (3 workers busy, 2 queued)
+  #   puts pool.active_count  #=> 3 (3 workers processing)
   #
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
@@ -69,7 +71,8 @@ module AtomicRuby
       @name = name
 
       @state = Atom.new(queue: [], shutdown: false)
-      @started_threads = Atom.new(0)
+      @started_thread_count = Atom.new(0)
+      @active_thread_count = Atom.new(0)
       @threads = []
 
       start
@@ -151,6 +154,33 @@ module AtomicRuby
     # @rbs () -> Integer
     alias queue_size queue_length
 
+    # Returns the number of worker threads currently executing work.
+    #
+    # This represents threads that have picked up a work item and are
+    # actively processing it. The count includes threads in the middle
+    # of executing work.call, but excludes threads that are idle or
+    # waiting for work.
+    #
+    # @return [Integer] The number of threads actively processing work
+    #
+    # @example Monitor active workers
+    #   pool = AtomicThreadPool.new(size: 4)
+    #   puts pool.active_count #=> 0
+    #
+    #   5.times { pool << proc { sleep(1) } }
+    #   sleep(0.1) # Give threads time to pick up work
+    #   puts pool.active_count #=> 4 (all workers busy)
+    #   puts pool.queue_length #=> 1 (one item still queued)
+    #
+    # @example Calculate total load
+    #   total_load = pool.active_count + pool.queue_length
+    #   puts "Total pending work: #{total_load}"
+    #
+    # @rbs () -> Integer
+    def active_count
+      @active_thread_count.value
+    end
+
     # Gracefully shuts down the thread pool.
     #
     # This method:
@@ -207,7 +237,7 @@ module AtomicRuby
           thread_name << " for #{@name}" if @name
           Thread.current.name = thread_name
 
-          @started_threads.swap { |current_count| current_count + 1 }
+          @started_thread_count.swap { |current_count| current_count + 1 }
 
           loop do
             work = nil
@@ -228,12 +258,15 @@ module AtomicRuby
             if should_shutdown
               break
             elsif work
+              @active_thread_count.swap { |current_count| current_count + 1 }
               begin
                 work.call
               rescue => err
                 puts "#{thread_name} rescued:"
                 puts "#{err.class}: #{err.message}"
                 puts err.backtrace.join("\n")
+              ensure
+                @active_thread_count.swap { |current_count| current_count - 1 }
               end
             else
               Thread.pass
@@ -243,7 +276,7 @@ module AtomicRuby
       end
       @threads.freeze
 
-      Thread.pass until @started_threads.value == @size
+      Thread.pass until @started_thread_count.value == @size
     end
   end
 end
