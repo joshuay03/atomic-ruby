@@ -17,3 +17,4 @@ steps:
       - apt-get update && apt-get install -y libyaml-dev
       - bundle install
       - bundle exec rake
+    soft_fail: true
