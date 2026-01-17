@@ -11,6 +11,12 @@ steps:
       - bundle install
       - bundle exec rake
 
+  - label: ":ruby: Ruby 4.0"
+    image: "ruby:4.0"
+    commands:
+      - bundle install
+      - bundle exec rake
+
   - label: ":ruby: Ruby head"
     image: "rubylang/ruby:master-dev"
     commands:
