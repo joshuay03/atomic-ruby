@@ -6,13 +6,13 @@
 <title>
   Class: AtomicRuby::AtomicBoolean
   
-    &mdash; Documentation by YARD 0.9.38
+    &mdash; Documentation by YARD 0.9.43
   
 </title>
 
-  <link rel="stylesheet" href="../css/style.css" type="text/css" />
+  <link rel="stylesheet" href="../css/style.css" type="text/css">
 
-  <link rel="stylesheet" href="../css/common.css" type="text/css" />
+  <link rel="stylesheet" href="../css/common.css" type="text/css">
 
 <script type="text/javascript">
   pathId = "AtomicRuby::AtomicBoolean";
@@ -27,6 +27,8 @@
 
   </head>
   <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
     <div class="nav_wrap">
       <iframe id="nav" src="../class_list.html?1"></iframe>
       <div id="resizer"></div>
@@ -94,7 +96,10 @@
   
   <dl>
     <dt>Defined in:</dt>
-    <dd>lib/atomic-ruby/atomic_boolean.rb</dd>
+    <dd>lib/atomic-ruby/atomic_boolean.rb<span class="defines">,<br>
+  sig/generated/atomic-ruby/atomic_boolean.rbs</span>
+
+</dd>
   </dl>
   
 </div>
@@ -104,16 +109,13 @@
     
   <div class="note notetag">
     <strong>Note:</strong>
-    <div class='inline'>
-<p>This class is Ractor-safe in Ruby 4.0+ when compiled with ractor support.</p>
-</div>
+    <div class='inline'><p>This class is Ractor-safe in Ruby 4.0+ when compiled with ractor support.</p></div>
   </div>
 
-
 <p>Provides atomic boolean semantics with thread-safe toggle operations.</p>
-
-<p>AtomicBoolean wraps a boolean value in an atomic reference, providing lock-free operations for common boolean manipulations like toggling, setting to true/false, and checking the current state.</p>
-
+<p>AtomicBoolean wraps a boolean value in an atomic reference, providing
+lock-free operations for common boolean manipulations like toggling,
+setting to true/false, and checking the current state.</p>
 
   </div>
 </div>
@@ -123,9 +125,7 @@
     <h4 class="tag_title">Examples:</h4>
     
       
-        <h5 class="example_title"><div class='inline'>
-<p>Basic usage</p>
-</div></h5>
+        <h5 class="example_title"><div class='inline'><p>Basic usage</p></div></h5>
       
       <pre class="example code"><code><span class='id identifier rubyid_boolean'>boolean</span> <span class='op'>=</span> <span class='const'>AtomicBoolean</span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
 <span class='id identifier rubyid_puts'>puts</span> <span class='id identifier rubyid_boolean'>boolean</span><span class='period'>.</span><span class='id identifier rubyid_false?'>false?</span> <span class='comment'>#=&gt; true
@@ -133,9 +133,7 @@
 <span class='id identifier rubyid_puts'>puts</span> <span class='id identifier rubyid_boolean'>boolean</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>  <span class='comment'>#=&gt; true</span></code></pre>
     
       
-        <h5 class="example_title"><div class='inline'>
-<p>Thread-safe toggle</p>
-</div></h5>
+        <h5 class="example_title"><div class='inline'><p>Thread-safe toggle</p></div></h5>
       
       <pre class="example code"><code><span class='id identifier rubyid_boolean'>boolean</span> <span class='op'>=</span> <span class='const'>AtomicBoolean</span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
 <span class='id identifier rubyid_threads'>threads</span> <span class='op'>=</span> <span class='int'>10</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span>
@@ -145,9 +143,7 @@
 <span class='comment'># Final state depends on whether total toggles is even or odd</span></code></pre>
     
       
-        <h5 class="example_title"><div class='inline'>
-<p>Atomic flag setting</p>
-</div></h5>
+        <h5 class="example_title"><div class='inline'><p>Atomic flag setting</p></div></h5>
       
       <pre class="example code"><code><span class='id identifier rubyid_flag'>flag</span> <span class='op'>=</span> <span class='const'>AtomicBoolean</span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
 <span class='id identifier rubyid_flag'>flag</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
@@ -188,9 +184,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Tests if the current value is false.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Tests if the current value is false.</p></div></span>
   
 </li>
 
@@ -214,9 +208,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Creates a new atomic boolean with the given initial value.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Creates a new atomic boolean with the given initial value.</p></div></span>
   
 </li>
 
@@ -238,9 +230,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Atomically sets the value to false.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Atomically sets the value to false.</p></div></span>
   
 </li>
 
@@ -262,9 +252,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Atomically sets the value to true.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Atomically sets the value to true.</p></div></span>
   
 </li>
 
@@ -286,9 +274,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Atomically toggles the boolean value.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Atomically toggles the boolean value.</p></div></span>
   
 </li>
 
@@ -310,9 +296,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Tests if the current value is true.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Tests if the current value is true.</p></div></span>
   
 </li>
 
@@ -334,14 +318,13 @@
   
 
   
-    <span class="summary_desc"><div class='inline'>
-<p>Returns the current boolean value stored in the atom.</p>
-</div></span>
+    <span class="summary_desc"><div class='inline'><p>Returns the current boolean value stored in the atom.</p></div></span>
   
 </li>
 
       
     </ul>
+    
   
 
 <div id="constructor_details" class="method_details_list">
@@ -358,9 +341,7 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Creates a new atomic boolean with the given initial value.</p>
-
+    <p>Creates a new atomic boolean with the given initial value.</p>
 
   </div>
 </div>
@@ -374,9 +355,7 @@
 <span class='id identifier rubyid_boolean'>boolean</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span></code></pre>
     
       
-        <h5 class="example_title"><div class='inline'>
-<p>Invalid usage</p>
-</div></h5>
+        <h5 class="example_title"><div class='inline'><p>Invalid usage</p></div></h5>
       
       <pre class="example code"><code><span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='kw'>nil</span><span class='rparen'>)</span>     <span class='comment'>#=&gt; raises ArgumentError
 </span><span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>true</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>  <span class='comment'>#=&gt; raises ArgumentError</span></code></pre>
@@ -395,9 +374,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>The initial boolean value</p>
-</div>
+        <div class='inline'><p>The initial boolean value</p></div>
       
     </li>
   
@@ -414,9 +391,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>if the value is not a boolean (TrueClass or FalseClass)</p>
-</div>
+        <div class='inline'><p>if the value is not a boolean (TrueClass or FalseClass)</p></div>
       
     </li>
   
@@ -473,9 +448,7 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Tests if the current value is false.</p>
-
+    <p>Tests if the current value is false.</p>
 
   </div>
 </div>
@@ -502,9 +475,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>true if the atomic value is false, false otherwise</p>
-</div>
+        <div class='inline'><p>true if the atomic value is false, false otherwise</p></div>
       
     </li>
   
@@ -542,11 +513,9 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Atomically sets the value to false.</p>
-
-<p>This operation uses compare-and-swap to ensure atomicity, making it safe for concurrent access.</p>
-
+    <p>Atomically sets the value to false.</p>
+<p>This operation uses compare-and-swap to ensure atomicity,
+making it safe for concurrent access.</p>
 
   </div>
 </div>
@@ -573,9 +542,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>Always returns false (the new value)</p>
-</div>
+        <div class='inline'><p>Always returns false (the new value)</p></div>
       
     </li>
   
@@ -613,11 +580,9 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Atomically sets the value to true.</p>
-
-<p>This operation uses compare-and-swap to ensure atomicity, making it safe for concurrent access.</p>
-
+    <p>Atomically sets the value to true.</p>
+<p>This operation uses compare-and-swap to ensure atomicity,
+making it safe for concurrent access.</p>
 
   </div>
 </div>
@@ -644,9 +609,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>Always returns true (the new value)</p>
-</div>
+        <div class='inline'><p>Always returns true (the new value)</p></div>
       
     </li>
   
@@ -684,11 +647,9 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Atomically toggles the boolean value.</p>
-
-<p>Changes true to false and false to true using a compare-and-swap operation, making it safe for concurrent access from multiple threads.</p>
-
+    <p>Atomically toggles the boolean value.</p>
+<p>Changes true to false and false to true using a compare-and-swap
+operation, making it safe for concurrent access from multiple threads.</p>
 
   </div>
 </div>
@@ -703,9 +664,7 @@
 </span><span class='id identifier rubyid_boolean'>boolean</span><span class='period'>.</span><span class='id identifier rubyid_toggle'>toggle</span> <span class='comment'>#=&gt; false</span></code></pre>
     
       
-        <h5 class="example_title"><div class='inline'>
-<p>Thread-safe toggling</p>
-</div></h5>
+        <h5 class="example_title"><div class='inline'><p>Thread-safe toggling</p></div></h5>
       
       <pre class="example code"><code><span class='id identifier rubyid_boolean'>boolean</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
 <span class='int'>10</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_boolean'>boolean</span><span class='period'>.</span><span class='id identifier rubyid_toggle'>toggle</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:join</span><span class='rparen'>)</span></code></pre>
@@ -723,9 +682,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>The new boolean value after toggling</p>
-</div>
+        <div class='inline'><p>The new boolean value after toggling</p></div>
       
     </li>
   
@@ -763,9 +720,7 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Tests if the current value is true.</p>
-
+    <p>Tests if the current value is true.</p>
 
   </div>
 </div>
@@ -792,9 +747,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>true if the atomic value is true, false otherwise</p>
-</div>
+        <div class='inline'><p>true if the atomic value is true, false otherwise</p></div>
       
     </li>
   
@@ -832,11 +785,10 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    
-<p>Returns the current boolean value stored in the atom.</p>
-
-<p>This operation is atomic and thread-safe. The returned value reflects the state at the time of the call, but may change immediately after in concurrent environments.</p>
-
+    <p>Returns the current boolean value stored in the atom.</p>
+<p>This operation is atomic and thread-safe. The returned value reflects
+the state at the time of the call, but may change immediately after
+in concurrent environments.</p>
 
   </div>
 </div>
@@ -862,9 +814,7 @@
       
       
         &mdash;
-        <div class='inline'>
-<p>The current atomic boolean value</p>
-</div>
+        <div class='inline'><p>The current atomic boolean value</p></div>
       
     </li>
   
@@ -896,9 +846,9 @@
 </div>
 
       <div id="footer">
-  Generated on Sat Jan 17 05:28:11 2026 by
+  Generated on Sat May  9 11:10:26 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.38 (ruby-4.1.0).
+  0.9.43 (ruby-4.1.0).
 </div>
 
     </div>
