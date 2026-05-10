@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Use `warn` in `AtomicThreadPool` error output
 - Add `on_error:` to `AtomicThreadPool`
 - Remove redundant `Thread.pass` spin in `AtomicThreadPool#shutdown`
 - Fix O(n) performance issue in `AtomicThreadPool` queue by using two-stack linked list

@@ -287,9 +287,8 @@ module AtomicRuby
                 if @on_error
                   @on_error.call(err)
                 else
-                  puts "#{thread_name} rescued:"
-                  puts "#{err.class}: #{err.message}"
-                  puts err.backtrace.join("\n")
+                  warn "#{thread_name} rescued:"
+                  warn err.full_message
                 end
               ensure
                 @active_thread_count.swap { |current_count| current_count - 1 }
