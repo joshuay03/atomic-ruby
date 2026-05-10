@@ -55,9 +55,13 @@ module AtomicRuby
     #
     # @param size [Integer] The number of worker threads to create (must be positive)
     # @param name [String, nil] Optional name for the thread pool (used in thread names)
+    # @param on_error [Proc, nil] Optional error handler called with the exception when
+    #   a work item raises. Receives the exception as its argument. When nil, errors
+    #   are printed to stderr
     #
     # @raise [ArgumentError] if size is not a positive integer
     # @raise [ArgumentError] if name is provided but not a string
+    # @raise [ArgumentError] if on_error is provided but not a Proc
     #
     # @example Create a basic pool
     #   pool = AtomicThreadPool.new(size: 4)
@@ -65,8 +69,12 @@ module AtomicRuby
     # @example Create a named pool
     #   pool = AtomicThreadPool.new(size: 2, name: "Database Workers")
     #
-    # @rbs (size: Integer, ?name: String?) -> void
-    def initialize: (size: Integer, ?name: String?) -> void
+    # @example Create a pool with a custom error handler
+    #   errors = []
+    #   pool = AtomicThreadPool.new(size: 2, on_error: ->(err) { errors << err })
+    #
+    # @rbs (size: Integer, ?name: String?, ?on_error: Proc?) -> void
+    def initialize: (size: Integer, ?name: String?, ?on_error: Proc?) -> void
 
     # Enqueues work to be executed by the thread pool.
     #

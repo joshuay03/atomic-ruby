@@ -57,9 +57,13 @@ module AtomicRuby
     #
     # @param size [Integer] The number of worker threads to create (must be positive)
     # @param name [String, nil] Optional name for the thread pool (used in thread names)
+    # @param on_error [Proc, nil] Optional error handler called with the exception when
+    #   a work item raises. Receives the exception as its argument. When nil, errors
+    #   are printed to stderr
     #
     # @raise [ArgumentError] if size is not a positive integer
     # @raise [ArgumentError] if name is provided but not a string
+    # @raise [ArgumentError] if on_error is provided but not a Proc
     #
     # @example Create a basic pool
     #   pool = AtomicThreadPool.new(size: 4)
@@ -67,13 +71,19 @@ module AtomicRuby
     # @example Create a named pool
     #   pool = AtomicThreadPool.new(size: 2, name: "Database Workers")
     #
-    # @rbs (size: Integer, ?name: String?) -> void
-    def initialize(size:, name: nil)
+    # @example Create a pool with a custom error handler
+    #   errors = []
+    #   pool = AtomicThreadPool.new(size: 2, on_error: ->(err) { errors << err })
+    #
+    # @rbs (size: Integer, ?name: String?, ?on_error: Proc?) -> void
+    def initialize(size:, name: nil, on_error: nil)
       raise ArgumentError, "size must be a positive Integer" unless size.is_a?(Integer) && size > 0
       raise ArgumentError, "name must be a String" unless name.nil? || name.is_a?(String)
+      raise ArgumentError, "on_error must be a Proc" unless on_error.nil? || on_error.is_a?(Proc)
 
       @size = size
       @name = name
+      @on_error = on_error
 
       @state = Atom.new(in: nil, out: nil, count: 0, shutdown: false)
       @started_thread_count = Atom.new(0)
@@ -274,9 +284,13 @@ module AtomicRuby
               begin
                 work.call
               rescue => err
-                puts "#{thread_name} rescued:"
-                puts "#{err.class}: #{err.message}"
-                puts err.backtrace.join("\n")
+                if @on_error
+                  @on_error.call(err)
+                else
+                  puts "#{thread_name} rescued:"
+                  puts "#{err.class}: #{err.message}"
+                  puts err.backtrace.join("\n")
+                end
               ensure
                 @active_thread_count.swap { |current_count| current_count - 1 }
               end

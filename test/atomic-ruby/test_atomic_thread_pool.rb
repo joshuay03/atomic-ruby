@@ -33,6 +33,12 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_init_with_invalid_on_error
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 2, on_error: "not a proc")
+    end
+  end
+
   if AtomicRuby::RACTOR_SAFE
     def test_not_ractor_shareable
       pool = AtomicThreadPool.new(size: 2)
@@ -77,6 +83,16 @@ class TestAtomicThreadPool < Minitest::Test
     end
     assert_match(/AtomicThreadPool thread \d+ rescued:\nRuntimeError: oops/, out)
     pool.shutdown
+  end
+
+  def test_enqueue_error_raising_work_with_on_error
+    errors = []
+    pool = AtomicThreadPool.new(size: 2, on_error: ->(err) { errors << err })
+    pool << proc { raise RuntimeError, "oops" }
+    pool.shutdown
+    assert_equal 1, errors.length
+    assert_kind_of RuntimeError, errors.first
+    assert_equal "oops", errors.first.message
   end
 
   def test_length
