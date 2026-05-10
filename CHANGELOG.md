@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-10
+
 - Use `warn` in `AtomicThreadPool` error output
 - Add `on_error:` to `AtomicThreadPool`
 - Remove redundant `Thread.pass` spin in `AtomicThreadPool#shutdown`
