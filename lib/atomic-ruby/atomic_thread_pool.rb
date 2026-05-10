@@ -10,6 +10,11 @@ module AtomicRuby
   # work items from an atomic queue. The pool uses compare-and-swap operations
   # for thread-safe work enqueueing and state management.
   #
+  # The queue is implemented as a two-stack structure (in/out) backed by
+  # immutable frozen linked-list nodes. Enqueueing prepends to the `in` stack
+  # in O(1); dequeueing pops from the `out` stack in O(1), reversing `in` into
+  # `out` only when `out` is exhausted (amortized O(1) per item).
+  #
   # @example Basic usage
   #   pool = AtomicThreadPool.new(size: 4)
   #   pool << proc { puts "Hello from worker thread!" }
@@ -70,7 +75,7 @@ module AtomicRuby
       @size = size
       @name = name
 
-      @state = Atom.new(queue: [], shutdown: false)
+      @state = Atom.new(in: nil, out: nil, count: 0, shutdown: false)
       @started_thread_count = Atom.new(0)
       @active_thread_count = Atom.new(0)
       @threads = []
@@ -83,6 +88,7 @@ module AtomicRuby
     # The work item must respond to #call (typically a Proc or lambda).
     # Work items are executed in FIFO order by available worker threads.
     # If all workers are busy, the work is queued atomically.
+    # Enqueueing is O(1) regardless of current queue depth.
     #
     # @param work [#call] A callable object to be executed by a worker thread
     #
@@ -105,7 +111,8 @@ module AtomicRuby
         if current_state[:shutdown]
           current_state
         else
-          current_state.merge(queue: [*current_state[:queue], work])
+          new_node = { value: work, next: current_state[:in] }.freeze
+          current_state.merge(in: new_node, count: current_state[:count] + 1)
         end
       end
       raise EnqueuedWorkAfterShutdownError if state[:shutdown]
@@ -130,6 +137,7 @@ module AtomicRuby
       @threads.select(&:alive?).length
     end
     # Alias for {#length}.
+    #
     # @rbs () -> Integer
     alias size length
 
@@ -148,9 +156,10 @@ module AtomicRuby
     #
     # @rbs () -> Integer
     def queue_length
-      @state.value[:queue].length
+      @state.value[:count]
     end
     # Alias for {#queue_length}.
+    #
     # @rbs () -> Integer
     alias queue_size queue_length
 
@@ -215,7 +224,7 @@ module AtomicRuby
       end
       return if already_shutdown
 
-      Thread.pass until @state.value[:queue].empty?
+      Thread.pass until @state.value[:count].zero?
 
       @threads.each(&:join)
     end
@@ -229,6 +238,7 @@ module AtomicRuby
     # for all threads to be fully started before returning.
     #
     # @return [void]
+    #
     # @rbs () -> void
     def start
       @size.times do |num|
@@ -244,14 +254,18 @@ module AtomicRuby
             should_shutdown = false
 
             @state.swap do |current_state|
-              if current_state[:shutdown] && current_state[:queue].empty?
+              if current_state[:shutdown] && current_state[:in].nil? && current_state[:out].nil?
                 should_shutdown = true
                 current_state
-              elsif current_state[:queue].empty?
-                current_state
+              elsif current_state[:out]
+                work = current_state[:out][:value]
+                current_state.merge(out: current_state[:out][:next], count: current_state[:count] - 1)
+              elsif current_state[:in]
+                new_out = reverse_list(current_state[:in])
+                work = new_out[:value]
+                current_state.merge(in: nil, out: new_out[:next], count: current_state[:count] - 1)
               else
-                work = current_state[:queue].first
-                current_state.merge(queue: current_state[:queue].drop(1))
+                current_state
               end
             end
 
@@ -277,6 +291,22 @@ module AtomicRuby
       @threads.freeze
 
       Thread.pass until @started_thread_count.value == @size
+    end
+
+    # Reverses a linked-list of frozen nodes, returning a new reversed list.
+    # Each node in the returned list is a new frozen hash.
+    #
+    # @param node [Hash, nil] Head of the list to reverse
+    # @return [Hash, nil] Head of the reversed list
+    #
+    # @rbs (Hash? node) -> Hash?
+    def reverse_list(node)
+      reversed = nil
+      while node
+        reversed = { value: node[:value], next: reversed }.freeze
+        node = node[:next]
+      end
+      reversed
     end
   end
 end

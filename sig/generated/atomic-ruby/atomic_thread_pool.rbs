@@ -7,6 +7,11 @@ module AtomicRuby
   # work items from an atomic queue. The pool uses compare-and-swap operations
   # for thread-safe work enqueueing and state management.
   #
+  # The queue is implemented as a two-stack structure (in/out) backed by
+  # immutable frozen linked-list nodes. Enqueueing prepends to the `in` stack
+  # in O(1); dequeueing pops from the `out` stack in O(1), reversing `in` into
+  # `out` only when `out` is exhausted (amortized O(1) per item).
+  #
   # @example Basic usage
   #   pool = AtomicThreadPool.new(size: 4)
   #   pool << proc { puts "Hello from worker thread!" }
@@ -68,6 +73,7 @@ module AtomicRuby
     # The work item must respond to #call (typically a Proc or lambda).
     # Work items are executed in FIFO order by available worker threads.
     # If all workers are busy, the work is queued atomically.
+    # Enqueueing is O(1) regardless of current queue depth.
     #
     # @param work [#call] A callable object to be executed by a worker thread
     #
@@ -105,6 +111,7 @@ module AtomicRuby
     def length: () -> Integer
 
     # Alias for {#length}.
+    #
     # @rbs () -> Integer
     alias size length
 
@@ -125,6 +132,7 @@ module AtomicRuby
     def queue_length: () -> Integer
 
     # Alias for {#queue_length}.
+    #
     # @rbs () -> Integer
     alias queue_size queue_length
 
@@ -186,8 +194,18 @@ module AtomicRuby
     # for all threads to be fully started before returning.
     #
     # @return [void]
+    #
     # @rbs () -> void
     def start: () -> void
+
+    # Reverses a linked-list of frozen nodes, returning a new reversed list.
+    # Each node in the returned list is a new frozen hash.
+    #
+    # @param node [Hash, nil] Head of the list to reverse
+    # @return [Hash, nil] Head of the reversed list
+    #
+    # @rbs (Hash? node) -> Hash?
+    def reverse_list: (Hash? node) -> Hash?
   end
 end
 
