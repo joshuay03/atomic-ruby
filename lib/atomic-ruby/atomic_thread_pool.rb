@@ -224,8 +224,6 @@ module AtomicRuby
       end
       return if already_shutdown
 
-      Thread.pass until @state.value[:count].zero?
-
       @threads.each(&:join)
     end
 

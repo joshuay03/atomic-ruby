@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Remove redundant `Thread.pass` spin in `AtomicThreadPool#shutdown`
 - Fix O(n) performance issue in `AtomicThreadPool` queue by using two-stack linked list
 
 ## [0.10.0] - 2025-11-09
