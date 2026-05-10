@@ -117,6 +117,10 @@ that cannot be safely shared across ractors.</p></div>
 <p>AtomicThreadPool maintains a fixed number of worker threads that process
 work items from an atomic queue. The pool uses compare-and-swap operations
 for thread-safe work enqueueing and state management.</p>
+<p>The queue is implemented as a two-stack structure (in/out) backed by
+immutable frozen linked-list nodes. Enqueueing prepends to the <code>in</code> stack
+in O(1); dequeueing pops from the <code>out</code> stack in O(1), reversing <code>in</code> into
+<code>out</code> only when <code>out</code> is exhausted (amortized O(1) per item).</p>
 
   </div>
 </div>
@@ -305,6 +309,28 @@ for thread-safe work enqueueing and state management.</p>
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#reverse_list-instance_method" title="#reverse_list (instance method)">#<strong>reverse_list</strong>(node)  &#x21d2; Hash<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Reverses a linked-list of frozen nodes, returning a new reversed list.</p></div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#shutdown-instance_method" title="#shutdown (instance method)">#<strong>shutdown</strong>  &#x21d2; void </a>
     
 
@@ -383,6 +409,12 @@ for thread-safe work enqueueing and state management.</p>
       
       <pre class="example code"><code><span class='id identifier rubyid_pool'>pool</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicThreadPool (class)">AtomicThreadPool</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>size:</span> <span class='int'>2</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Database Workers</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span></code></pre>
     
+      
+        <h5 class="example_title"><div class='inline'><p>Create a pool with a custom error handler</p></div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_errors'>errors</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+<span class='id identifier rubyid_pool'>pool</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicThreadPool (class)">AtomicThreadPool</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>size:</span> <span class='int'>2</span><span class='comma'>,</span> <span class='label'>on_error:</span> <span class='tlambda'>-&gt;</span><span class='lparen'>(</span><span class='id identifier rubyid_err'>err</span><span class='rparen'>)</span> <span class='tlambeg'>{</span> <span class='id identifier rubyid_errors'>errors</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_err'>err</span> <span class='rbrace'>}</span><span class='rparen'>)</span></code></pre>
+    
   </div>
 <p class="tag_title">Parameters:</p>
 <ul class="param">
@@ -419,6 +451,24 @@ for thread-safe work enqueueing and state management.</p>
   
     <li>
       
+        <span class='name'>on_error</span>
+      
+      
+        <span class='type'>(<tt>Proc</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>Optional error handler called with the exception when
+a work item raises. Receives the exception as its argument. When nil, errors
+are printed to stderr</p></div>
+      
+    </li>
+  
+    <li>
+      
         <span class='name'>size:</span>
       
       
@@ -434,6 +484,19 @@ for thread-safe work enqueueing and state management.</p>
       
       
         <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>nil</tt>)</em>
+      
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>on_error:</span>
+      
+      
+        <span class='type'>(<tt>Proc</tt>, <tt>nil</tt>)</span>
       
       
         <em class="default">(defaults to: <tt>nil</tt>)</em>
@@ -467,6 +530,18 @@ for thread-safe work enqueueing and state management.</p>
       
         &mdash;
         <div class='inline'><p>if name is provided but not a string</p></div>
+      
+    </li>
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>ArgumentError</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>if on_error is provided but not a Proc</p></div>
       
     </li>
   
@@ -540,7 +615,8 @@ for thread-safe work enqueueing and state management.</p>
     <p class="note returns_void">This method returns an undefined value.</p><p>Enqueues work to be executed by the thread pool.</p>
 <p>The work item must respond to #call (typically a Proc or lambda).
 Work items are executed in FIFO order by available worker threads.
-If all workers are busy, the work is queued atomically.</p>
+If all workers are busy, the work is queued atomically.
+Enqueueing is O(1) regardless of current queue depth.</p>
 
   </div>
 </div>
@@ -867,6 +943,90 @@ being submitted faster than it can be processed.</p>
 </div>
     
       <div class="method_details ">
+  <h3 class="signature " id="reverse_list-instance_method">
+  
+    #<strong>reverse_list</strong>(node)  &#x21d2; <tt>Hash</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Reverses a linked-list of frozen nodes, returning a new reversed list.
+Each node in the returned list is a new frozen hash.</p>
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>node</span>
+      
+      
+        <span class='type'>(<tt>Hash</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Head of the list to reverse</p></div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Hash</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Head of the reversed list</p></div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+314
+315
+316
+317
+318
+319
+320
+321</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 314</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_reverse_list'>reverse_list</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_reversed'>reversed</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='kw'>while</span> <span class='id identifier rubyid_node'>node</span>
+    <span class='id identifier rubyid_reversed'>reversed</span> <span class='op'>=</span> <span class='lbrace'>{</span> <span class='label'>value:</span> <span class='id identifier rubyid_node'>node</span><span class='lbracket'>[</span><span class='symbol'>:value</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>next:</span> <span class='id identifier rubyid_reversed'>reversed</span> <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span>
+    <span class='id identifier rubyid_node'>node</span> <span class='op'>=</span> <span class='id identifier rubyid_node'>node</span><span class='lbracket'>[</span><span class='symbol'>:next</span><span class='rbracket'>]</span>
+  <span class='kw'>end</span>
+  <span class='id identifier rubyid_reversed'>reversed</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
   <h3 class="signature " id="shutdown-instance_method">
   
     #<strong>shutdown</strong>  &#x21d2; <tt>void</tt> 
@@ -1114,7 +1274,7 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Sun May 10 00:35:39 2026 by
+  Generated on Sun May 10 00:38:39 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.43 (ruby-4.1.0).
 </div>
