@@ -379,13 +379,13 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 ```
 > bundle exec rake compile && bundle exec ruby examples/atomic_thread_pool_benchmark.rb
 
-ruby version:            ruby 4.0.3 (2026-04-21 revision 85ddef263a) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.4 (2026-05-12 revision b89eb1bcbf) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.11.0
+atomic-ruby version:     0.11.1
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    6.168734 seconds
-Atomic Ruby Atomic Thread Pool: 5.789739 seconds
+Concurrent Ruby Thread Pool:    5.869825 seconds
+Atomic Ruby Atomic Thread Pool: 5.387304 seconds
 ```
 
 </details>
