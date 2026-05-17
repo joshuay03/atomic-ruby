@@ -294,7 +294,7 @@ module AtomicRuby
                 @active_thread_count.swap { |current_count| current_count - 1 }
               end
             else
-              Thread.pass
+              sleep 0.001
             end
           end
         end
