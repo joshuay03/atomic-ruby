@@ -695,7 +695,9 @@ Enqueueing is O(1) regardless of current queue depth.</p>
 126
 127
 128
-129</pre>
+129
+130
+131</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 119</span>
@@ -710,6 +712,8 @@ Enqueueing is O(1) regardless of current queue depth.</p>
     <span class='kw'>end</span>
   <span class='kw'>end</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="AtomicThreadPool/EnqueuedWorkAfterShutdownError.html" title="AtomicRuby::AtomicThreadPool::EnqueuedWorkAfterShutdownError (class)">EnqueuedWorkAfterShutdownError</a></span></span> <span class='kw'>if</span> <span class='id identifier rubyid_state'>state</span><span class='lbracket'>[</span><span class='symbol'>:shutdown</span><span class='rbracket'>]</span>
+
+  <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:wakeup</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -782,12 +786,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-199
-200
-201</pre>
+201
+202
+203</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 199</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 201</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_active_count'>active_count</span>
   <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -855,12 +859,12 @@ passed to the constructor.</p>
       <pre class="lines">
 
 
-146
-147
-148</pre>
+148
+149
+150</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 146</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 148</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_length'>length</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select'>select</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span>
@@ -927,12 +931,12 @@ being submitted faster than it can be processed.</p>
       <pre class="lines">
 
 
-168
-169
-170</pre>
+170
+171
+172</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 168</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 170</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_length'>queue_length</span>
   <span class='ivar'>@state</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span>
@@ -1001,17 +1005,17 @@ Each node in the returned list is a new frozen hash.</p>
       <pre class="lines">
 
 
-314
-315
 316
 317
 318
 319
 320
-321</pre>
+321
+322
+323</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 314</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 316</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_reverse_list'>reverse_list</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_reversed'>reversed</span> <span class='op'>=</span> <span class='kw'>nil</span>
@@ -1086,8 +1090,6 @@ will raise an exception.</p>
       <pre class="lines">
 
 
-225
-226
 227
 228
 229
@@ -1099,10 +1101,12 @@ will raise an exception.</p>
 235
 236
 237
-238</pre>
+238
+239
+240</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 225</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 227</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_shutdown'>shutdown</span>
   <span class='id identifier rubyid_already_shutdown'>already_shutdown</span> <span class='op'>=</span> <span class='kw'>false</span>
@@ -1150,8 +1154,6 @@ for all threads to be fully started before returning.</p>
       <pre class="lines">
 
 
-251
-252
 253
 254
 255
@@ -1204,10 +1206,12 @@ for all threads to be fully started before returning.</p>
 302
 303
 304
-305</pre>
+305
+306
+307</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 251</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 253</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='ivar'>@size</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_num'>num</span><span class='op'>|</span>
@@ -1274,7 +1278,7 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Sun May 17 10:07:16 2026 by
+  Generated on Mon May 18 08:35:09 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.43 (ruby-4.1.0).
 </div>
