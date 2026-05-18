@@ -79,10 +79,9 @@ class TestAtomicThreadPool < Minitest::Test
     pool = AtomicThreadPool.new(size: 2)
     _out, err = capture_io do
       pool << proc { raise "oops" }
-      sleep 0.1
+      pool.shutdown
     end
     assert_match(/AtomicThreadPool thread \d+ rescued:\n.+oops \(RuntimeError\)/, err)
-    pool.shutdown
   end
 
   def test_enqueue_error_raising_work_with_on_error
