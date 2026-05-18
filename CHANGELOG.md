@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Wake idle `AtomicThreadPool` workers on enqueue
+
 ## [0.11.1] - 2026-05-17
 
 - Replace `Thread.pass` busy-wait with `sleep` in idle `AtomicThreadPool` workers

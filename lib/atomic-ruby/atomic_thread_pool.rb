@@ -126,6 +126,8 @@ module AtomicRuby
         end
       end
       raise EnqueuedWorkAfterShutdownError if state[:shutdown]
+
+      @threads.each(&:wakeup)
     end
 
     # Returns the number of currently alive worker threads.
