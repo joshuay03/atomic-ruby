@@ -6,7 +6,7 @@
 <title>
   Class: AtomicRuby::AtomicThreadPool
   
-    &mdash; Documentation by YARD 0.9.43
+    &mdash; Documentation by YARD 0.9.44
   
 </title>
 
@@ -553,7 +553,6 @@ are printed to stderr</p></div>
       <pre class="lines">
 
 
-79
 80
 81
 82
@@ -568,10 +567,12 @@ are printed to stderr</p></div>
 91
 92
 93
-94</pre>
+94
+95
+96</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 79</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 80</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>size:</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>on_error:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'>ArgumentError</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>size must be a positive Integer</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='id identifier rubyid_size'>size</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Integer</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_size'>size</span> <span class='op'>&gt;</span> <span class='int'>0</span>
@@ -583,6 +584,7 @@ are printed to stderr</p></div>
   <span class='ivar'>@on_error</span> <span class='op'>=</span> <span class='id identifier rubyid_on_error'>on_error</span>
 
   <span class='ivar'>@state</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="Atom.html" title="AtomicRuby::Atom (class)">Atom</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="Atom.html#initialize-instance_method" title="AtomicRuby::Atom#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='label'>in:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>out:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>count:</span> <span class='int'>0</span><span class='comma'>,</span> <span class='label'>shutdown:</span> <span class='kw'>false</span><span class='rparen'>)</span>
+  <span class='ivar'>@work_available</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicConditionVariable.html" title="AtomicRuby::AtomicConditionVariable (class)">AtomicConditionVariable</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicConditionVariable.html#initialize-instance_method" title="AtomicRuby::AtomicConditionVariable#initialize (method)">new</a></span></span>
   <span class='ivar'>@started_thread_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="Atom.html" title="AtomicRuby::Atom (class)">Atom</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="Atom.html#initialize-instance_method" title="AtomicRuby::Atom#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
   <span class='ivar'>@active_thread_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="Atom.html" title="AtomicRuby::Atom (class)">Atom</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="Atom.html#initialize-instance_method" title="AtomicRuby::Atom#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
@@ -685,8 +687,6 @@ Enqueueing is O(1) regardless of current queue depth.</p>
       <pre class="lines">
 
 
-119
-120
 121
 122
 123
@@ -697,10 +697,12 @@ Enqueueing is O(1) regardless of current queue depth.</p>
 128
 129
 130
-131</pre>
+131
+132
+133</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 119</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 121</span>
 
 <span class='kw'>def</span> <span class='op'>&lt;&lt;</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_state'>state</span> <span class='op'>=</span> <span class='ivar'>@state</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_current_state'>current_state</span><span class='op'>|</span>
@@ -713,7 +715,7 @@ Enqueueing is O(1) regardless of current queue depth.</p>
   <span class='kw'>end</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="AtomicThreadPool/EnqueuedWorkAfterShutdownError.html" title="AtomicRuby::AtomicThreadPool::EnqueuedWorkAfterShutdownError (class)">EnqueuedWorkAfterShutdownError</a></span></span> <span class='kw'>if</span> <span class='id identifier rubyid_state'>state</span><span class='lbracket'>[</span><span class='symbol'>:shutdown</span><span class='rbracket'>]</span>
 
-  <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:wakeup</span><span class='rparen'>)</span>
+  <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_signal'>signal</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -786,12 +788,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-201
-202
-203</pre>
+203
+204
+205</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 201</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 203</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_active_count'>active_count</span>
   <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -859,12 +861,12 @@ passed to the constructor.</p>
       <pre class="lines">
 
 
-148
-149
-150</pre>
+150
+151
+152</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 148</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 150</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_length'>length</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select'>select</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span>
@@ -931,12 +933,12 @@ being submitted faster than it can be processed.</p>
       <pre class="lines">
 
 
-170
-171
-172</pre>
+172
+173
+174</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 170</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 172</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_length'>queue_length</span>
   <span class='ivar'>@state</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span>
@@ -1005,17 +1007,17 @@ Each node in the returned list is a new frozen hash.</p>
       <pre class="lines">
 
 
-316
-317
 318
 319
 320
 321
 322
-323</pre>
+323
+324
+325</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 316</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 318</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_reverse_list'>reverse_list</span><span class='lparen'>(</span><span class='id identifier rubyid_node'>node</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_reversed'>reversed</span> <span class='op'>=</span> <span class='kw'>nil</span>
@@ -1090,8 +1092,6 @@ will raise an exception.</p>
       <pre class="lines">
 
 
-227
-228
 229
 230
 231
@@ -1103,10 +1103,13 @@ will raise an exception.</p>
 237
 238
 239
-240</pre>
+240
+241
+242
+243</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 227</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 229</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_shutdown'>shutdown</span>
   <span class='id identifier rubyid_already_shutdown'>already_shutdown</span> <span class='op'>=</span> <span class='kw'>false</span>
@@ -1120,6 +1123,7 @@ will raise an exception.</p>
   <span class='kw'>end</span>
   <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_already_shutdown'>already_shutdown</span>
 
+  <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:join</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
@@ -1154,9 +1158,6 @@ for all threads to be fully started before returning.</p>
       <pre class="lines">
 
 
-253
-254
-255
 256
 257
 258
@@ -1208,10 +1209,12 @@ for all threads to be fully started before returning.</p>
 304
 305
 306
-307</pre>
+307
+308
+309</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 253</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 256</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='ivar'>@size</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_num'>num</span><span class='op'>|</span>
@@ -1226,40 +1229,39 @@ for all threads to be fully started before returning.</p>
         <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='kw'>nil</span>
         <span class='id identifier rubyid_should_shutdown'>should_shutdown</span> <span class='op'>=</span> <span class='kw'>false</span>
 
-        <span class='ivar'>@state</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_current_state'>current_state</span><span class='op'>|</span>
-          <span class='kw'>if</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:shutdown</span><span class='rbracket'>]</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
-            <span class='id identifier rubyid_should_shutdown'>should_shutdown</span> <span class='op'>=</span> <span class='kw'>true</span>
-            <span class='id identifier rubyid_current_state'>current_state</span>
-          <span class='kw'>elsif</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span>
-            <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:value</span><span class='rbracket'>]</span>
-            <span class='id identifier rubyid_current_state'>current_state</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='label'>out:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:next</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>count:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='int'>1</span><span class='rparen'>)</span>
-          <span class='kw'>elsif</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span>
-            <span class='id identifier rubyid_new_out'>new_out</span> <span class='op'>=</span> <span class='id identifier rubyid_reverse_list'>reverse_list</span><span class='lparen'>(</span><span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span><span class='rparen'>)</span>
-            <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='id identifier rubyid_new_out'>new_out</span><span class='lbracket'>[</span><span class='symbol'>:value</span><span class='rbracket'>]</span>
-            <span class='id identifier rubyid_current_state'>current_state</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='label'>in:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>out:</span> <span class='id identifier rubyid_new_out'>new_out</span><span class='lbracket'>[</span><span class='symbol'>:next</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>count:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='int'>1</span><span class='rparen'>)</span>
-          <span class='kw'>else</span>
-            <span class='id identifier rubyid_current_state'>current_state</span>
+        <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span> <span class='kw'>do</span>
+          <span class='ivar'>@state</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_current_state'>current_state</span><span class='op'>|</span>
+            <span class='kw'>if</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:shutdown</span><span class='rbracket'>]</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
+              <span class='id identifier rubyid_should_shutdown'>should_shutdown</span> <span class='op'>=</span> <span class='kw'>true</span>
+              <span class='id identifier rubyid_current_state'>current_state</span>
+            <span class='kw'>elsif</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span>
+              <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:value</span><span class='rbracket'>]</span>
+              <span class='id identifier rubyid_current_state'>current_state</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='label'>out:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:out</span><span class='rbracket'>]</span><span class='lbracket'>[</span><span class='symbol'>:next</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>count:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='int'>1</span><span class='rparen'>)</span>
+            <span class='kw'>elsif</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span>
+              <span class='id identifier rubyid_new_out'>new_out</span> <span class='op'>=</span> <span class='id identifier rubyid_reverse_list'>reverse_list</span><span class='lparen'>(</span><span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:in</span><span class='rbracket'>]</span><span class='rparen'>)</span>
+              <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='id identifier rubyid_new_out'>new_out</span><span class='lbracket'>[</span><span class='symbol'>:value</span><span class='rbracket'>]</span>
+              <span class='id identifier rubyid_current_state'>current_state</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='label'>in:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>out:</span> <span class='id identifier rubyid_new_out'>new_out</span><span class='lbracket'>[</span><span class='symbol'>:next</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>count:</span> <span class='id identifier rubyid_current_state'>current_state</span><span class='lbracket'>[</span><span class='symbol'>:count</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='int'>1</span><span class='rparen'>)</span>
+            <span class='kw'>else</span>
+              <span class='id identifier rubyid_current_state'>current_state</span>
+            <span class='kw'>end</span>
           <span class='kw'>end</span>
+          <span class='id identifier rubyid_work'>work</span> <span class='op'>||</span> <span class='id identifier rubyid_should_shutdown'>should_shutdown</span>
         <span class='kw'>end</span>
 
-        <span class='kw'>if</span> <span class='id identifier rubyid_should_shutdown'>should_shutdown</span>
-          <span class='kw'>break</span>
-        <span class='kw'>elsif</span> <span class='id identifier rubyid_work'>work</span>
-          <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>+</span> <span class='int'>1</span> <span class='rbrace'>}</span>
-          <span class='kw'>begin</span>
-            <span class='id identifier rubyid_work'>work</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
-          <span class='kw'>rescue</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_err'>err</span>
-            <span class='kw'>if</span> <span class='ivar'>@on_error</span>
-              <span class='ivar'>@on_error</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_err'>err</span><span class='rparen'>)</span>
-            <span class='kw'>else</span>
-              <span class='id identifier rubyid_warn'>warn</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_thread_name'>thread_name</span><span class='embexpr_end'>}</span><span class='tstring_content'> rescued:</span><span class='tstring_end'>&quot;</span></span>
-              <span class='id identifier rubyid_warn'>warn</span> <span class='id identifier rubyid_err'>err</span><span class='period'>.</span><span class='id identifier rubyid_full_message'>full_message</span>
-            <span class='kw'>end</span>
-          <span class='kw'>ensure</span>
-            <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>-</span> <span class='int'>1</span> <span class='rbrace'>}</span>
+        <span class='kw'>break</span> <span class='kw'>if</span> <span class='id identifier rubyid_should_shutdown'>should_shutdown</span>
+
+        <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>+</span> <span class='int'>1</span> <span class='rbrace'>}</span>
+        <span class='kw'>begin</span>
+          <span class='id identifier rubyid_work'>work</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
+        <span class='kw'>rescue</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_err'>err</span>
+          <span class='kw'>if</span> <span class='ivar'>@on_error</span>
+            <span class='ivar'>@on_error</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_err'>err</span><span class='rparen'>)</span>
+          <span class='kw'>else</span>
+            <span class='id identifier rubyid_warn'>warn</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_thread_name'>thread_name</span><span class='embexpr_end'>}</span><span class='tstring_content'> rescued:</span><span class='tstring_end'>&quot;</span></span>
+            <span class='id identifier rubyid_warn'>warn</span> <span class='id identifier rubyid_err'>err</span><span class='period'>.</span><span class='id identifier rubyid_full_message'>full_message</span>
           <span class='kw'>end</span>
-        <span class='kw'>else</span>
-          <span class='id identifier rubyid_sleep'>sleep</span> <span class='float'>0.001</span>
+        <span class='kw'>ensure</span>
+          <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>-</span> <span class='int'>1</span> <span class='rbrace'>}</span>
         <span class='kw'>end</span>
       <span class='kw'>end</span>
     <span class='kw'>end</span>
@@ -1278,9 +1280,9 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Mon May 18 08:57:48 2026 by
+  Generated on Thu Jun 11 21:19:07 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
-  0.9.43 (ruby-4.1.0).
+  0.9.44 (ruby-4.1.0).
 </div>
 
     </div>
