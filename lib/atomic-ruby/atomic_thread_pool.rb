@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require_relative "atom"
+require_relative "atomic_condition_variable"
 
 module AtomicRuby
   # Provides a fixed-size thread pool using atomic operations for work queuing.
@@ -86,6 +87,7 @@ module AtomicRuby
       @on_error = on_error
 
       @state = Atom.new(in: nil, out: nil, count: 0, shutdown: false)
+      @work_available = AtomicConditionVariable.new
       @started_thread_count = Atom.new(0)
       @active_thread_count = Atom.new(0)
       @threads = []
@@ -127,7 +129,7 @@ module AtomicRuby
       end
       raise EnqueuedWorkAfterShutdownError if state[:shutdown]
 
-      @threads.each(&:wakeup)
+      @work_available.signal
     end
 
     # Returns the number of currently alive worker threads.
@@ -236,6 +238,7 @@ module AtomicRuby
       end
       return if already_shutdown
 
+      @work_available.broadcast
       @threads.each(&:join)
     end
 
@@ -263,40 +266,39 @@ module AtomicRuby
             work = nil
             should_shutdown = false
 
-            @state.swap do |current_state|
-              if current_state[:shutdown] && current_state[:in].nil? && current_state[:out].nil?
-                should_shutdown = true
-                current_state
-              elsif current_state[:out]
-                work = current_state[:out][:value]
-                current_state.merge(out: current_state[:out][:next], count: current_state[:count] - 1)
-              elsif current_state[:in]
-                new_out = reverse_list(current_state[:in])
-                work = new_out[:value]
-                current_state.merge(in: nil, out: new_out[:next], count: current_state[:count] - 1)
-              else
-                current_state
+            @work_available.wait do
+              @state.swap do |current_state|
+                if current_state[:shutdown] && current_state[:in].nil? && current_state[:out].nil?
+                  should_shutdown = true
+                  current_state
+                elsif current_state[:out]
+                  work = current_state[:out][:value]
+                  current_state.merge(out: current_state[:out][:next], count: current_state[:count] - 1)
+                elsif current_state[:in]
+                  new_out = reverse_list(current_state[:in])
+                  work = new_out[:value]
+                  current_state.merge(in: nil, out: new_out[:next], count: current_state[:count] - 1)
+                else
+                  current_state
+                end
               end
+              work || should_shutdown
             end
 
-            if should_shutdown
-              break
-            elsif work
-              @active_thread_count.swap { |current_count| current_count + 1 }
-              begin
-                work.call
-              rescue => err
-                if @on_error
-                  @on_error.call(err)
-                else
-                  warn "#{thread_name} rescued:"
-                  warn err.full_message
-                end
-              ensure
-                @active_thread_count.swap { |current_count| current_count - 1 }
+            break if should_shutdown
+
+            @active_thread_count.swap { |current_count| current_count + 1 }
+            begin
+              work.call
+            rescue => err
+              if @on_error
+                @on_error.call(err)
+              else
+                warn "#{thread_name} rescued:"
+                warn err.full_message
               end
-            else
-              sleep 0.001
+            ensure
+              @active_thread_count.swap { |current_count| current_count - 1 }
             end
           end
         end

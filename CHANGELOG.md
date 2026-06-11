@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Replace `sleep` with `AtomicConditionVariable` in idle `AtomicThreadPool` workers
 - Add `AtomicConditionVariable`
 
 ## [0.12.0] - 2026-05-18
