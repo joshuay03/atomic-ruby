@@ -49,6 +49,27 @@ atom.toggle
 p atom.false? #=> true
 ```
 
+`AtomicConditionVariable`:
+
+```ruby
+require "atomic-ruby"
+
+condvar = AtomicConditionVariable.new
+ready = AtomicBoolean.new(false)
+p condvar.waiter_count #=> 0
+
+waiter = Thread.new do
+  condvar.wait { ready.true? }
+end
+Thread.pass until condvar.waiter_count == 1
+p condvar.waiter_count #=> 1
+
+ready.make_true
+p condvar.signal #=> true
+waiter.join
+p condvar.waiter_count #=> 0
+```
+
 `AtomicThreadPool`:
 
 ```ruby
@@ -98,7 +119,7 @@ p latch.count #=> 0
 ```
 
 > [!NOTE]
-> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 4.0+.
+> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 4.0+. `AtomicConditionVariable` is not, since it parks `Thread` references which cannot be shared across ractors.
 
 ## Benchmarks
 
@@ -324,6 +345,86 @@ Comparison:
 Synchronized Boolean Toggle:               1414.1 i/s
 Concurrent Ruby Atomic Boolean Toggle:     1148.7 i/s - 1.23x  slower
 Atomic Ruby Atomic Boolean Toggle:         1046.5 i/s - 1.35x  slower
+```
+
+</details>
+
+<details>
+
+<summary>AtomicConditionVariable</summary>
+
+```ruby
+# frozen_string_literal: true
+
+require "benchmark/ips"
+require_relative "../lib/atomic-ruby"
+
+module Benchmark
+  module IPS
+    class Job
+      class StreamReport
+        def start_warming
+          @out.puts "\n"
+          @out.puts "ruby version:        #{RUBY_DESCRIPTION}"
+          @out.puts "atomic-ruby version: #{AtomicRuby::VERSION}"
+          @out.puts "\n"
+          @out.puts "Warming up --------------------------------------"
+        end
+      end
+    end
+  end
+end
+
+Benchmark.ips do |x|
+  x.report("Synchronized Condition Variable Wait/Signal") do
+    flag = false
+    mutex = Mutex.new
+    condvar = ConditionVariable.new
+
+    waiter = Thread.new do
+      mutex.synchronize do
+        condvar.wait(mutex) until flag
+      end
+    end
+
+    mutex.synchronize do
+      flag = true
+      condvar.signal
+    end
+    waiter.join
+  end
+
+  x.report("Atomic Ruby Atomic Condition Variable Wait/Signal") do
+    flag = AtomicBoolean.new(false)
+    condvar = AtomicConditionVariable.new
+
+    waiter = Thread.new { condvar.wait { flag.true? } }
+
+    flag.make_true
+    condvar.signal
+    waiter.join
+  end
+
+  x.compare!
+end
+```
+
+```
+> bundle exec rake compile && bundle exec ruby examples/atomic_condition_variable_benchmark.rb
+
+ruby version:        ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+atomic-ruby version: 0.12.0
+
+Warming up --------------------------------------
+      Synchronized Condition Variable Wait/Signal     4.037k i/100ms
+Atomic Ruby Atomic Condition Variable Wait/Signal     3.947k i/100ms
+Calculating -------------------------------------
+      Synchronized Condition Variable Wait/Signal     40.735k (± 4.3%) i/s   (24.55 μs/i) -    205.887k in   5.054334s
+Atomic Ruby Atomic Condition Variable Wait/Signal     38.328k (± 5.5%) i/s   (26.09 μs/i) -    193.403k in   5.045941s
+
+Comparison:
+      Synchronized Condition Variable Wait/Signal:    40734.7 i/s
+Atomic Ruby Atomic Condition Variable Wait/Signal:    38328.4 i/s - same-ish: difference falls within error
 ```
 
 </details>

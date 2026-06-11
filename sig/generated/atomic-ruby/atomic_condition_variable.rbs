@@ -1,0 +1,126 @@
+# Generated from lib/atomic-ruby/atomic_condition_variable.rb with RBS::Inline
+
+module AtomicRuby
+  # Provides lock-free wait/signal coordination using atomic operations.
+  #
+  # AtomicConditionVariable lets one or more threads park until another
+  # thread signals them, without the paired `Mutex` that Ruby's
+  # `ConditionVariable` requires. Coordination is done by publishing the
+  # set of parked threads through an {Atom}, so all in-process
+  # synchronisation stays on the gem's CAS path. Parking still uses
+  # `Thread.stop` and `Thread#wakeup`, which are the standard kernel-level
+  # primitives Ruby exposes for sleeping a thread.
+  #
+  # The lost-wakeup race in a naive `check-then-park` consumer is avoided
+  # by the {#wait} contract: a waiter registers itself before re-evaluating
+  # the predicate, so any signal that fires after the producer makes the
+  # predicate true is guaranteed to see the waiter and wake it. Ruby also
+  # remembers pending wakeups across `Thread.stop`, so a wakeup that
+  # arrives between the predicate check and the actual park is not lost.
+  #
+  # @example Basic usage
+  #   condvar = AtomicConditionVariable.new
+  #   ready = AtomicBoolean.new(false)
+  #
+  #   waiter = Thread.new do
+  #     condvar.wait { ready.true? }
+  #     puts "ready"
+  #   end
+  #
+  #   ready.make_true
+  #   condvar.signal
+  #
+  # @example Worker loop draining an atomic queue
+  #   condvar.wait do
+  #     work = nil
+  #     queue.swap do |q|
+  #       q.empty? ? q : (work = q.first; q.drop(1).freeze)
+  #     end
+  #     work
+  #   end
+  #
+  # @note This class is NOT Ractor-safe as it parks `Thread` references,
+  #   which cannot be shared across ractors.
+  class AtomicConditionVariable
+    # Creates a new condition variable with no parked threads.
+    #
+    # @example
+    #   condvar = AtomicConditionVariable.new
+    #
+    # @rbs () -> void
+    def initialize: () -> void
+
+    # Returns the number of currently parked waiters.
+    #
+    # This operation is atomic and thread-safe. The returned value reflects
+    # the state at the time of the call, but may change immediately after
+    # in concurrent environments.
+    #
+    # @return [Integer] The number of currently parked waiters
+    #
+    # @example
+    #   condvar = AtomicConditionVariable.new
+    #   puts condvar.waiter_count #=> 0
+    #
+    # @rbs () -> Integer
+    def waiter_count: () -> Integer
+
+    # Wakes one parked waiter, or no-ops if none are parked.
+    #
+    # If a waiter has registered itself but is not yet inside `Thread.stop`,
+    # Ruby remembers the wakeup and the next `Thread.stop` returns
+    # immediately.
+    #
+    # @return [true, false] true if a waiter was signalled, false otherwise
+    #
+    # @example
+    #   condvar = AtomicConditionVariable.new
+    #   condvar.signal #=> false
+    #
+    # @rbs () -> bool
+    def signal: () -> bool
+
+    # Wakes every parked waiter.
+    #
+    # Each woken thread observes the wake the same way as with {#signal}.
+    #
+    # @return [Integer] The number of waiters signalled
+    #
+    # @example
+    #   condvar = AtomicConditionVariable.new
+    #   condvar.broadcast #=> 0
+    #
+    # @rbs () -> Integer
+    def broadcast: () -> Integer
+
+    # Blocks until the given block returns a truthy value, then returns that
+    # value.
+    #
+    # The block is evaluated optimistically first. If it returns truthy on
+    # that pass, no waiter is registered and the call returns immediately.
+    # Otherwise the calling thread registers itself, re-evaluates the
+    # block, and parks via `Thread.stop` until a {#signal} or {#broadcast}
+    # wakes it. The block may run more than once and may run concurrently
+    # with a signalling thread.
+    #
+    # @yieldreturn [untyped] Truthy to wake, falsy to keep waiting
+    # @return [untyped] The first truthy value returned by the block
+    #
+    # @example Simple wait
+    #   condvar = AtomicConditionVariable.new
+    #   ready = AtomicBoolean.new(false)
+    #
+    #   Thread.new do
+    #     sleep(1)
+    #     ready.make_true
+    #     condvar.signal
+    #   end
+    #
+    #   condvar.wait { ready.true? } #=> true
+    #
+    # @rbs () { () -> untyped } -> untyped
+    def wait: () { () -> untyped } -> untyped
+  end
+end
+
+AtomicConditionVariable: untyped

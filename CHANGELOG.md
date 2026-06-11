@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add `AtomicConditionVariable`
+
 ## [0.12.0] - 2026-05-18
 
 - Wake idle `AtomicThreadPool` workers on enqueue
