@@ -5,11 +5,12 @@ module AtomicRuby
   #
   # AtomicConditionVariable lets one or more threads park until another
   # thread signals them, without the paired `Mutex` that Ruby's
-  # `ConditionVariable` requires. Coordination is done by publishing the
-  # set of parked threads through an {Atom}, so all in-process
-  # synchronisation stays on the gem's CAS path. Parking still uses
-  # `Thread.stop` and `Thread#wakeup`, which are the standard kernel-level
-  # primitives Ruby exposes for sleeping a thread.
+  # `ConditionVariable` requires. The set of parked threads is tracked
+  # in a native doubly-linked list, so registering a waiter, removing a
+  # waiter, and shifting the head off for a signal are all O(1) and
+  # allocation-light. Parking still uses `Thread.stop` and
+  # `Thread#wakeup`, which are the standard kernel-level primitives Ruby
+  # exposes for sleeping a thread.
   #
   # The lost-wakeup race in a naive `check-then-park` consumer is avoided
   # by the {#wait} contract: a waiter registers itself before re-evaluating
@@ -32,11 +33,8 @@ module AtomicRuby
   #
   # @example Worker loop draining an atomic queue
   #   condvar.wait do
-  #     work = nil
-  #     queue.swap do |q|
-  #       q.empty? ? q : (work = q.first; q.drop(1).freeze)
-  #     end
-  #     work
+  #     work = queue.pop
+  #     work || shutdown.true?
   #   end
   #
   # @note This class is NOT Ractor-safe as it parks `Thread` references,

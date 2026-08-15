@@ -1,18 +1,19 @@
 # rbs_inline: enabled
 # frozen_string_literal: true
 
-require_relative "atom"
+require "atomic_ruby/atomic_ruby"
 
 module AtomicRuby
   # Provides lock-free wait/signal coordination using atomic operations.
   #
   # AtomicConditionVariable lets one or more threads park until another
   # thread signals them, without the paired `Mutex` that Ruby's
-  # `ConditionVariable` requires. Coordination is done by publishing the
-  # set of parked threads through an {Atom}, so all in-process
-  # synchronisation stays on the gem's CAS path. Parking still uses
-  # `Thread.stop` and `Thread#wakeup`, which are the standard kernel-level
-  # primitives Ruby exposes for sleeping a thread.
+  # `ConditionVariable` requires. The set of parked threads is tracked
+  # in a native doubly-linked list, so registering a waiter, removing a
+  # waiter, and shifting the head off for a signal are all O(1) and
+  # allocation-light. Parking still uses `Thread.stop` and
+  # `Thread#wakeup`, which are the standard kernel-level primitives Ruby
+  # exposes for sleeping a thread.
   #
   # The lost-wakeup race in a naive `check-then-park` consumer is avoided
   # by the {#wait} contract: a waiter registers itself before re-evaluating
@@ -35,11 +36,8 @@ module AtomicRuby
   #
   # @example Worker loop draining an atomic queue
   #   condvar.wait do
-  #     work = nil
-  #     queue.swap do |q|
-  #       q.empty? ? q : (work = q.first; q.drop(1).freeze)
-  #     end
-  #     work
+  #     work = queue.pop
+  #     work || shutdown.true?
   #   end
   #
   # @note This class is NOT Ractor-safe as it parks `Thread` references,
@@ -52,7 +50,7 @@ module AtomicRuby
     #
     # @rbs () -> void
     def initialize
-      @waiters = Atom.new([].freeze)
+      _initialize
     end
 
     # Returns the number of currently parked waiters.
@@ -69,7 +67,7 @@ module AtomicRuby
     #
     # @rbs () -> Integer
     def waiter_count
-      @waiters.value.size
+      _waiter_count
     end
 
     # Wakes one parked waiter, or no-ops if none are parked.
@@ -86,18 +84,10 @@ module AtomicRuby
     #
     # @rbs () -> bool
     def signal
-      target = nil
-      @waiters.swap do |waiters|
-        if waiters.empty?
-          waiters
-        else
-          target = waiters.first
-          waiters.drop(1).freeze
-        end
-      end
-      return false unless target
+      thread = _shift_thread
+      return false unless thread
 
-      target.wakeup rescue nil
+      thread.wakeup rescue nil
       true
     end
 
@@ -113,13 +103,9 @@ module AtomicRuby
     #
     # @rbs () -> Integer
     def broadcast
-      targets = nil
-      @waiters.swap do |waiters|
-        targets = waiters
-        [].freeze
-      end
-      targets.each { |thread| thread.wakeup rescue nil }
-      targets.size
+      threads = _drain_threads
+      threads.each { |thread| thread.wakeup rescue nil }
+      threads.size
     end
 
     # Blocks until the given block returns a truthy value, then returns that
@@ -154,15 +140,15 @@ module AtomicRuby
 
       self_thread = Thread.current
       loop do
-        @waiters.swap { |waiters| (waiters + [self_thread]).freeze }
+        waiter = _add_waiter(self_thread)
         result = yield
         if result
-          @waiters.swap { |waiters| (waiters - [self_thread]).freeze }
+          _remove_waiter(waiter)
           return result
         end
 
         Thread.stop
-        @waiters.swap { |waiters| (waiters - [self_thread]).freeze }
+        _remove_waiter(waiter)
       end
     end
   end

@@ -307,6 +307,220 @@ static VALUE rb_cAtomicQueue_empty_p(VALUE self) {
   return RUBY_ATOMIC_LOAD(atomic_ruby_queue->count) == 0 ? Qtrue : Qfalse;
 }
 
+typedef struct {
+  volatile VALUE prev;
+  volatile VALUE next;
+  volatile VALUE thread;
+} atomic_ruby_condition_variable_waiter_t;
+
+static void atomic_ruby_condition_variable_waiter_mark(void *ptr) {
+  atomic_ruby_condition_variable_waiter_t *atomic_ruby_condition_variable_waiter = (atomic_ruby_condition_variable_waiter_t *)ptr;
+  rb_gc_mark_movable(atomic_ruby_condition_variable_waiter->prev);
+  rb_gc_mark_movable(atomic_ruby_condition_variable_waiter->next);
+  rb_gc_mark_movable(atomic_ruby_condition_variable_waiter->thread);
+}
+
+static void atomic_ruby_condition_variable_waiter_free(void *ptr) {
+  xfree(ptr);
+}
+
+static size_t atomic_ruby_condition_variable_waiter_memsize(const void *ptr) {
+  return sizeof(atomic_ruby_condition_variable_waiter_t);
+}
+
+static void atomic_ruby_condition_variable_waiter_compact(void *ptr) {
+  atomic_ruby_condition_variable_waiter_t *atomic_ruby_condition_variable_waiter = (atomic_ruby_condition_variable_waiter_t *)ptr;
+  atomic_ruby_condition_variable_waiter->prev = rb_gc_location(atomic_ruby_condition_variable_waiter->prev);
+  atomic_ruby_condition_variable_waiter->next = rb_gc_location(atomic_ruby_condition_variable_waiter->next);
+  atomic_ruby_condition_variable_waiter->thread = rb_gc_location(atomic_ruby_condition_variable_waiter->thread);
+}
+
+static const rb_data_type_t atomic_ruby_condition_variable_waiter_type = {
+  .wrap_struct_name = "AtomicRuby::AtomicConditionVariable::Waiter",
+  .function = {
+    .dmark = atomic_ruby_condition_variable_waiter_mark,
+    .dfree = atomic_ruby_condition_variable_waiter_free,
+    .dsize = atomic_ruby_condition_variable_waiter_memsize,
+    .dcompact = atomic_ruby_condition_variable_waiter_compact
+  },
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED
+};
+
+static VALUE rb_cAtomicConditionVariableWaiter;
+
+static VALUE atomic_ruby_condition_variable_waiter_new(VALUE thread) {
+  atomic_ruby_condition_variable_waiter_t *atomic_ruby_condition_variable_waiter;
+  VALUE obj = TypedData_Make_Struct(rb_cAtomicConditionVariableWaiter, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, atomic_ruby_condition_variable_waiter);
+  RB_OBJ_WRITE(obj, &atomic_ruby_condition_variable_waiter->prev, Qnil);
+  RB_OBJ_WRITE(obj, &atomic_ruby_condition_variable_waiter->next, Qnil);
+  RB_OBJ_WRITE(obj, &atomic_ruby_condition_variable_waiter->thread, thread);
+  return obj;
+}
+
+typedef struct {
+  volatile VALUE head;
+  volatile VALUE tail;
+  volatile rb_atomic_t count;
+} atomic_ruby_condition_variable_t;
+
+static void atomic_ruby_condition_variable_mark(void *ptr) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable = (atomic_ruby_condition_variable_t *)ptr;
+  rb_gc_mark_movable(atomic_ruby_condition_variable->head);
+  rb_gc_mark_movable(atomic_ruby_condition_variable->tail);
+}
+
+static void atomic_ruby_condition_variable_free(void *ptr) {
+  xfree(ptr);
+}
+
+static size_t atomic_ruby_condition_variable_memsize(const void *ptr) {
+  return sizeof(atomic_ruby_condition_variable_t);
+}
+
+static void atomic_ruby_condition_variable_compact(void *ptr) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable = (atomic_ruby_condition_variable_t *)ptr;
+  atomic_ruby_condition_variable->head = rb_gc_location(atomic_ruby_condition_variable->head);
+  atomic_ruby_condition_variable->tail = rb_gc_location(atomic_ruby_condition_variable->tail);
+}
+
+static const rb_data_type_t atomic_ruby_condition_variable_type = {
+  .wrap_struct_name = "AtomicRuby::AtomicConditionVariable",
+  .function = {
+    .dmark = atomic_ruby_condition_variable_mark,
+    .dfree = atomic_ruby_condition_variable_free,
+    .dsize = atomic_ruby_condition_variable_memsize,
+    .dcompact = atomic_ruby_condition_variable_compact
+  },
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED
+};
+
+static VALUE rb_cAtomicConditionVariable_allocate(VALUE klass) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  VALUE obj = TypedData_Make_Struct(klass, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+  RB_OBJ_WRITE(obj, &atomic_ruby_condition_variable->head, Qnil);
+  RB_OBJ_WRITE(obj, &atomic_ruby_condition_variable->tail, Qnil);
+  atomic_ruby_condition_variable->count = 0;
+  return obj;
+}
+
+static VALUE rb_cAtomicConditionVariable_initialize(VALUE self) {
+  return self;
+}
+
+static VALUE rb_cAtomicConditionVariable_add_waiter(VALUE self, VALUE thread) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  TypedData_Get_Struct(self, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+
+  VALUE new_waiter = atomic_ruby_condition_variable_waiter_new(thread);
+  atomic_ruby_condition_variable_waiter_t *new_waiter_data;
+  TypedData_Get_Struct(new_waiter, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, new_waiter_data);
+
+  VALUE tail = atomic_ruby_condition_variable->tail;
+  if (tail == Qnil) {
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->head, new_waiter);
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->tail, new_waiter);
+  } else {
+    atomic_ruby_condition_variable_waiter_t *tail_data;
+    TypedData_Get_Struct(tail, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, tail_data);
+    RB_OBJ_WRITE(tail, &tail_data->next, new_waiter);
+    RB_OBJ_WRITE(new_waiter, &new_waiter_data->prev, tail);
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->tail, new_waiter);
+  }
+  RUBY_ATOMIC_INC(atomic_ruby_condition_variable->count);
+
+  return new_waiter;
+}
+
+static VALUE rb_cAtomicConditionVariable_remove_waiter(VALUE self, VALUE waiter) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  TypedData_Get_Struct(self, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+  atomic_ruby_condition_variable_waiter_t *waiter_data;
+  TypedData_Get_Struct(waiter, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, waiter_data);
+
+  VALUE prev = waiter_data->prev;
+  VALUE next = waiter_data->next;
+
+  if (prev == Qnil && next == Qnil && atomic_ruby_condition_variable->head != waiter) return Qnil;
+
+  if (prev == Qnil) {
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->head, next);
+  } else {
+    atomic_ruby_condition_variable_waiter_t *prev_data;
+    TypedData_Get_Struct(prev, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, prev_data);
+    RB_OBJ_WRITE(prev, &prev_data->next, next);
+  }
+
+  if (next == Qnil) {
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->tail, prev);
+  } else {
+    atomic_ruby_condition_variable_waiter_t *next_data;
+    TypedData_Get_Struct(next, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, next_data);
+    RB_OBJ_WRITE(next, &next_data->prev, prev);
+  }
+
+  RB_OBJ_WRITE(waiter, &waiter_data->prev, Qnil);
+  RB_OBJ_WRITE(waiter, &waiter_data->next, Qnil);
+  RUBY_ATOMIC_DEC(atomic_ruby_condition_variable->count);
+
+  return Qnil;
+}
+
+static VALUE rb_cAtomicConditionVariable_shift_thread(VALUE self) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  TypedData_Get_Struct(self, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+
+  VALUE head = atomic_ruby_condition_variable->head;
+  if (head == Qnil) return Qnil;
+
+  atomic_ruby_condition_variable_waiter_t *head_data;
+  TypedData_Get_Struct(head, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, head_data);
+  VALUE thread = head_data->thread;
+  VALUE next = head_data->next;
+
+  RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->head, next);
+  if (next == Qnil) {
+    RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->tail, Qnil);
+  } else {
+    atomic_ruby_condition_variable_waiter_t *next_data;
+    TypedData_Get_Struct(next, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, next_data);
+    RB_OBJ_WRITE(next, &next_data->prev, Qnil);
+  }
+
+  RB_OBJ_WRITE(head, &head_data->prev, Qnil);
+  RB_OBJ_WRITE(head, &head_data->next, Qnil);
+  RUBY_ATOMIC_DEC(atomic_ruby_condition_variable->count);
+
+  return thread;
+}
+
+static VALUE rb_cAtomicConditionVariable_drain_threads(VALUE self) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  TypedData_Get_Struct(self, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+
+  VALUE threads = rb_ary_new();
+  VALUE current = atomic_ruby_condition_variable->head;
+  while (current != Qnil) {
+    atomic_ruby_condition_variable_waiter_t *waiter_data;
+    TypedData_Get_Struct(current, atomic_ruby_condition_variable_waiter_t, &atomic_ruby_condition_variable_waiter_type, waiter_data);
+    rb_ary_push(threads, waiter_data->thread);
+    VALUE next = waiter_data->next;
+    RB_OBJ_WRITE(current, &waiter_data->prev, Qnil);
+    RB_OBJ_WRITE(current, &waiter_data->next, Qnil);
+    current = next;
+  }
+  RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->head, Qnil);
+  RB_OBJ_WRITE(self, &atomic_ruby_condition_variable->tail, Qnil);
+  atomic_ruby_condition_variable->count = 0;
+
+  return threads;
+}
+
+static VALUE rb_cAtomicConditionVariable_waiter_count(VALUE self) {
+  atomic_ruby_condition_variable_t *atomic_ruby_condition_variable;
+  TypedData_Get_Struct(self, atomic_ruby_condition_variable_t, &atomic_ruby_condition_variable_type, atomic_ruby_condition_variable);
+  return UINT2NUM((unsigned int)RUBY_ATOMIC_LOAD(atomic_ruby_condition_variable->count));
+}
+
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
 #ifdef ATOMIC_RUBY_RACTOR_SAFE
   rb_ext_ractor_safe(true);
@@ -337,4 +551,16 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_private_method(rb_cAtomicQueue, "_pop", rb_cAtomicQueue_pop, 0);
   rb_define_private_method(rb_cAtomicQueue, "_size", rb_cAtomicQueue_size, 0);
   rb_define_private_method(rb_cAtomicQueue, "_empty_p", rb_cAtomicQueue_empty_p, 0);
+
+  VALUE rb_cAtomicConditionVariable = rb_define_class_under(rb_mAtomicRuby, "AtomicConditionVariable", rb_cObject);
+  rb_cAtomicConditionVariableWaiter = rb_define_class_under(rb_cAtomicConditionVariable, "Waiter", rb_cObject);
+  rb_undef_alloc_func(rb_cAtomicConditionVariableWaiter);
+
+  rb_define_alloc_func(rb_cAtomicConditionVariable, rb_cAtomicConditionVariable_allocate);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_initialize", rb_cAtomicConditionVariable_initialize, 0);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_add_waiter", rb_cAtomicConditionVariable_add_waiter, 1);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_remove_waiter", rb_cAtomicConditionVariable_remove_waiter, 1);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_shift_thread", rb_cAtomicConditionVariable_shift_thread, 0);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_drain_threads", rb_cAtomicConditionVariable_drain_threads, 0);
+  rb_define_private_method(rb_cAtomicConditionVariable, "_waiter_count", rb_cAtomicConditionVariable_waiter_count, 0);
 }

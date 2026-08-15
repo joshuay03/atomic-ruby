@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Replace the `AtomicConditionVariable` waiter list with a native doubly-linked list
 - Replace the two-stack queue in `AtomicThreadPool` with `AtomicQueue`
 - Add `AtomicQueue`
 
