@@ -115,7 +115,7 @@ to queued values that cannot be safely shared across ractors.</p></div>
 
 <p>Provides a lock-free FIFO queue using atomic operations.</p>
 <p>AtomicQueue is a multi-producer, multi-consumer queue backed by a
-linked list of frozen nodes with atomic head and tail pointers.
+singly-linked list of nodes with atomic head and tail pointers.
 Enqueueing and dequeueing use compare-and-swap operations so
 concurrent producers and consumers never block one another.</p>
 <p>The queue is implemented as a Michael-Scott lock-free FIFO with a
@@ -661,7 +661,7 @@ immediately after in concurrent environments.</p>
 </div>
 
       <div id="footer">
-  Generated on Sat Aug 15 00:08:50 2026 by
+  Generated on Sat Aug 15 00:22:54 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
