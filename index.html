@@ -107,9 +107,27 @@
 <span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_condvar'>condvar</span><span class='period'>.</span><span class='id identifier rubyid_waiter_count'>waiter_count</span> <span class='comment'>#=&gt; 1
 </span>
 <span class='id identifier rubyid_ready'>ready</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
-<span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_condvar'>condvar</span><span class='period'>.</span><span class='id identifier rubyid_signal'>signal</span> <span class='comment'>#=&gt; true
+<span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_condvar'>condvar</span><span class='period'>.</span><span class='id identifier rubyid_signal'>signal</span>       <span class='comment'>#=&gt; true
 </span><span class='id identifier rubyid_waiter'>waiter</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span>
 <span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_condvar'>condvar</span><span class='period'>.</span><span class='id identifier rubyid_waiter_count'>waiter_count</span> <span class='comment'>#=&gt; 0
+</span></code></pre>
+<p><code>AtomicQueue</code>:</p>
+<pre class="code ruby"><code class="ruby"><span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>atomic-ruby</span><span class='tstring_end'>&quot;</span></span>
+
+<span class='id identifier rubyid_queue'>queue</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="top-level-namespace.html#AtomicQueue-constant" title="AtomicQueue (constant)">AtomicQueue</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+<span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='comment'>#=&gt; true
+</span><span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span>   <span class='comment'>#=&gt; 0
+</span>
+<span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_push'>push</span><span class='lparen'>(</span><span class='int'>1</span><span class='rparen'>)</span>
+<span class='id identifier rubyid_queue'>queue</span> <span class='op'>&lt;&lt;</span> <span class='int'>2</span>
+<span class='id identifier rubyid_queue'>queue</span> <span class='op'>&lt;&lt;</span> <span class='int'>3</span>
+<span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span>   <span class='comment'>#=&gt; 3
+</span>
+<span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>    <span class='comment'>#=&gt; 1
+</span><span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>    <span class='comment'>#=&gt; 2
+</span><span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>    <span class='comment'>#=&gt; 3
+</span><span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>    <span class='comment'>#=&gt; nil
+</span><span class='id identifier rubyid_p'>p</span> <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='comment'>#=&gt; true
 </span></code></pre>
 <p><code>AtomicThreadPool</code>:</p>
 <pre class="code ruby"><code class="ruby"><span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>atomic-ruby</span><span class='tstring_end'>&quot;</span></span>
@@ -155,7 +173,9 @@
 </span></code></pre>
 <blockquote>
 <p>[!NOTE]
-<code>Atom</code>, <code>AtomicBoolean</code>, and <code>AtomicCountDownLatch</code> are Ractor-safe in Ruby 4.0+. <code>AtomicConditionVariable</code> is not, since it parks <code>Thread</code> references which cannot be shared across ractors.</p>
+<code>Atom</code>, <code>AtomicBoolean</code>, and <code>AtomicCountDownLatch</code> are Ractor-safe in Ruby 4.0+. <code>AtomicConditionVariable</code> and
+<code>AtomicQueue</code> are not, since they hold mutable references (parked <code>Thread</code>s and queued values, respectively) which
+cannot be shared across ractors.</p>
 </blockquote>
 <h2 id="Benchmarks">Benchmarks</h2>
 <details>
@@ -260,9 +280,9 @@
 </code></pre>
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atom_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -270,9 +290,9 @@ Concurrent Ruby Atomic Bank Account Balance: 975
 Atomic Ruby Atomic Bank Account Balance:     975
 
 Benchmark Results:
-Synchronized Bank Account:           5.109724 seconds
-Concurrent Ruby Atomic Bank Account: 5.137749 seconds
-Atomic Ruby Atomic Bank Account:     5.101637 seconds
+Synchronized Bank Account:           5.117072 seconds
+Concurrent Ruby Atomic Bank Account: 5.128366 seconds
+Atomic Ruby Atomic Bank Account:     5.110595 seconds
 </code></pre>
 </details>
 <details>
@@ -344,23 +364,23 @@ Atomic Ruby Atomic Bank Account:     5.101637 seconds
 </code></pre>
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_boolean_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Warming up --------------------------------------
-          Synchronized Boolean Toggle   167.000 i/100ms
-Concurrent Ruby Atomic Boolean Toggle   132.000 i/100ms
-    Atomic Ruby Atomic Boolean Toggle   117.000 i/100ms
+          Synchronized Boolean Toggle   157.000 i/100ms
+Concurrent Ruby Atomic Boolean Toggle   134.000 i/100ms
+    Atomic Ruby Atomic Boolean Toggle   120.000 i/100ms
 Calculating -------------------------------------
-          Synchronized Boolean Toggle      1.653k (± 2.0%) i/s  (605.04 μs/i) -      8.350k in   5.052096s
-Concurrent Ruby Atomic Boolean Toggle      1.313k (± 2.1%) i/s  (761.45 μs/i) -      6.600k in   5.025579s
-    Atomic Ruby Atomic Boolean Toggle      1.230k (± 4.8%) i/s  (812.86 μs/i) -      6.201k in   5.040557s
+          Synchronized Boolean Toggle      1.629k (± 2.0%) i/s  (613.87 μs/i) -      8.164k in   5.011636s
+Concurrent Ruby Atomic Boolean Toggle      1.325k (± 2.0%) i/s  (754.96 μs/i) -      6.700k in   5.058203s
+    Atomic Ruby Atomic Boolean Toggle      1.190k (± 2.6%) i/s  (840.11 μs/i) -      6.000k in   5.040665s
 
 Comparison:
-          Synchronized Boolean Toggle:     1652.8 i/s
-Concurrent Ruby Atomic Boolean Toggle:     1313.3 i/s - 1.26x  slower
-    Atomic Ruby Atomic Boolean Toggle:     1230.2 i/s - 1.34x  slower
+          Synchronized Boolean Toggle:     1629.0 i/s
+Concurrent Ruby Atomic Boolean Toggle:     1324.6 i/s - 1.23x  slower
+    Atomic Ruby Atomic Boolean Toggle:     1190.3 i/s - 1.37x  slower
 </code></pre>
 </details>
 <details>
@@ -421,19 +441,88 @@ Concurrent Ruby Atomic Boolean Toggle:     1313.3 i/s - 1.26x  slower
 </code></pre>
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_condition_variable_benchmark.rb
 
-ruby version:        ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.13.0
+ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
+atomic-ruby version: 0.14.0
 
 Warming up --------------------------------------
-      Synchronized Condition Variable Wait/Signal     3.847k i/100ms
-Atomic Ruby Atomic Condition Variable Wait/Signal     3.704k i/100ms
+      Synchronized Condition Variable Wait/Signal     3.977k i/100ms
+Atomic Ruby Atomic Condition Variable Wait/Signal     3.885k i/100ms
 Calculating -------------------------------------
-      Synchronized Condition Variable Wait/Signal     38.661k (± 4.4%) i/s   (25.87 μs/i) -    196.197k in   5.074793s
-Atomic Ruby Atomic Condition Variable Wait/Signal     37.895k (± 4.7%) i/s   (26.39 μs/i) -    192.608k in   5.082648s
+      Synchronized Condition Variable Wait/Signal     39.458k (± 4.2%) i/s   (25.34 μs/i) -    198.850k in   5.039596s
+Atomic Ruby Atomic Condition Variable Wait/Signal     39.046k (± 4.2%) i/s   (25.61 μs/i) -    198.135k in   5.074411s
 
 Comparison:
-      Synchronized Condition Variable Wait/Signal:    38661.1 i/s
-Atomic Ruby Atomic Condition Variable Wait/Signal:    37895.2 i/s - same-ish: difference falls within error
+      Synchronized Condition Variable Wait/Signal:    39457.5 i/s
+Atomic Ruby Atomic Condition Variable Wait/Signal:    39045.9 i/s - same-ish: difference falls within error
+</code></pre>
+</details>
+<details>
+<summary>AtomicQueue</summary>
+<pre class="code ruby"><code class="ruby"><span class='comment'># frozen_string_literal: true
+</span>
+<span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>benchmark/ips</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_require_relative'>require_relative</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>../lib/atomic-ruby</span><span class='tstring_end'>&quot;</span></span>
+
+<span class='kw'>module</span> <span class='const'>Benchmark</span>
+  <span class='kw'>module</span> <span class='const'>IPS</span>
+    <span class='kw'>class</span> <span class='const'>Job</span>
+      <span class='kw'>class</span> <span class='const'>StreamReport</span>
+        <span class='kw'>def</span> <span class='id identifier rubyid_start_warming'>start_warming</span>
+          <span class='ivar'>@out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span>
+          <span class='ivar'>@out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>ruby version:        </span><span class='embexpr_beg'>#{</span><span class='const'>RUBY_DESCRIPTION</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+          <span class='ivar'>@out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>atomic-ruby version: </span><span class='embexpr_beg'>#{</span><span class='const'><span class='object_link'><a href="AtomicRuby.html" title="AtomicRuby (module)">AtomicRuby</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="AtomicRuby.html#VERSION-constant" title="AtomicRuby::VERSION (constant)">VERSION</a></span></span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+          <span class='ivar'>@out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span>
+          <span class='ivar'>@out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Warming up --------------------------------------</span><span class='tstring_end'>&quot;</span></span>
+        <span class='kw'>end</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span>
+
+<span class='const'>Benchmark</span><span class='period'>.</span><span class='id identifier rubyid_ips'>ips</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_x'>x</span><span class='op'>|</span>
+  <span class='id identifier rubyid_x'>x</span><span class='period'>.</span><span class='id identifier rubyid_report'>report</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Synchronized Queue Push/Pop</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_queue'>queue</span> <span class='op'>=</span> <span class='const'>Thread</span><span class='op'>::</span><span class='const'>Queue</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+    <span class='int'>20</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span>
+      <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span> <span class='kw'>do</span>
+        <span class='int'>100</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_i'>i</span><span class='op'>|</span>
+          <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_push'>push</span><span class='lparen'>(</span><span class='id identifier rubyid_i'>i</span><span class='rparen'>)</span>
+          <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span><span class='lparen'>(</span><span class='kw'>true</span><span class='rparen'>)</span> <span class='kw'>rescue</span> <span class='kw'>nil</span>
+        <span class='kw'>end</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:join</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_x'>x</span><span class='period'>.</span><span class='id identifier rubyid_report'>report</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Atomic Ruby Atomic Queue Push/Pop</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_queue'>queue</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="top-level-namespace.html#AtomicQueue-constant" title="AtomicQueue (constant)">AtomicQueue</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+    <span class='int'>20</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span>
+      <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span> <span class='kw'>do</span>
+        <span class='int'>100</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_i'>i</span><span class='op'>|</span>
+          <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_push'>push</span><span class='lparen'>(</span><span class='id identifier rubyid_i'>i</span><span class='rparen'>)</span>
+          <span class='id identifier rubyid_queue'>queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>
+        <span class='kw'>end</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:join</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_x'>x</span><span class='period'>.</span><span class='id identifier rubyid_compare!'>compare!</span>
+<span class='kw'>end</span>
+</code></pre>
+<pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_queue_benchmark.rb
+
+ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
+atomic-ruby version: 0.14.0
+
+Warming up --------------------------------------
+      Synchronized Queue Push/Pop   181.000 i/100ms
+Atomic Ruby Atomic Queue Push/Pop   132.000 i/100ms
+Calculating -------------------------------------
+      Synchronized Queue Push/Pop      1.845k (± 2.1%) i/s  (541.91 μs/i) -      9.231k in   5.002394s
+Atomic Ruby Atomic Queue Push/Pop      1.431k (± 6.8%) i/s  (698.64 μs/i) -      7.260k in   5.072143s
+
+Comparison:
+      Synchronized Queue Push/Pop:     1845.3 i/s
+Atomic Ruby Atomic Queue Push/Pop:     1431.3 i/s - 1.29x  slower
+
 </code></pre>
 </details>
 <details>
@@ -481,13 +570,13 @@ Atomic Ruby Atomic Condition Variable Wait/Signal:    37895.2 i/s - same-ish: di
 </code></pre>
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_thread_pool_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.792203 seconds
-Atomic Ruby Atomic Thread Pool: 5.504388 seconds
+Concurrent Ruby Thread Pool:    5.078227 seconds
+Atomic Ruby Atomic Thread Pool: 4.824681 seconds
 </code></pre>
 </details>
 <h2 id="Development">Development</h2>
@@ -507,7 +596,7 @@ intended to be a safe, welcoming space for collaboration, and contributors are e
 follow the <a href="https://github.com/[joshuay03]/atomic-ruby/blob/main/CODE_OF_CONDUCT.md">code of conduct</a>.</p></div></div>
 
       <div id="footer">
-  Generated on Sat Aug 15 02:40:08 2026 by
+  Generated on Sat Aug 15 02:59:48 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
