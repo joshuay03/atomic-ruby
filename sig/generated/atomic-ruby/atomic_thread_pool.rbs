@@ -4,13 +4,9 @@ module AtomicRuby
   # Provides a fixed-size thread pool using atomic operations for work queuing.
   #
   # AtomicThreadPool maintains a fixed number of worker threads that process
-  # work items from an atomic queue. The pool uses compare-and-swap operations
-  # for thread-safe work enqueueing and state management.
-  #
-  # The queue is implemented as a two-stack structure (in/out) backed by
-  # immutable frozen linked-list nodes. Enqueueing prepends to the `in` stack
-  # in O(1); dequeueing pops from the `out` stack in O(1), reversing `in` into
-  # `out` only when `out` is exhausted (amortized O(1) per item).
+  # work items from an {AtomicQueue}. Both enqueueing and dequeueing are O(1)
+  # and lock-free, so concurrent producers and consumers never block one
+  # another.
   #
   # @example Basic usage
   #   pool = AtomicThreadPool.new(size: 4)
@@ -205,15 +201,6 @@ module AtomicRuby
     #
     # @rbs () -> void
     def start: () -> void
-
-    # Reverses a linked-list of frozen nodes, returning a new reversed list.
-    # Each node in the returned list is a new frozen hash.
-    #
-    # @param node [Hash, nil] Head of the list to reverse
-    # @return [Hash, nil] Head of the reversed list
-    #
-    # @rbs (Hash? node) -> Hash?
-    def reverse_list: (Hash? node) -> Hash?
   end
 end
 

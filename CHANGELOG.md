@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Replace the two-stack queue in `AtomicThreadPool` with `AtomicQueue`
 - Add `AtomicQueue`
 
 ## [0.13.0] - 2026-06-12
