@@ -1,5 +1,8 @@
 /.bundle/
 /tmp/
+
+*.o
+*.so
 *.bundle
-Gemfile.lock
 *.gem
+Gemfile.lock
