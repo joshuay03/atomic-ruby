@@ -65,9 +65,30 @@ Thread.pass until condvar.waiter_count == 1
 p condvar.waiter_count #=> 1
 
 ready.make_true
-p condvar.signal #=> true
+p condvar.signal       #=> true
 waiter.join
 p condvar.waiter_count #=> 0
+```
+
+`AtomicQueue`:
+
+```ruby
+require "atomic-ruby"
+
+queue = AtomicQueue.new
+p queue.empty? #=> true
+p queue.size   #=> 0
+
+queue.push(1)
+queue << 2
+queue << 3
+p queue.size   #=> 3
+
+p queue.pop    #=> 1
+p queue.pop    #=> 2
+p queue.pop    #=> 3
+p queue.pop    #=> nil
+p queue.empty? #=> true
 ```
 
 `AtomicThreadPool`:
@@ -119,7 +140,9 @@ p latch.count #=> 0
 ```
 
 > [!NOTE]
-> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 4.0+. `AtomicConditionVariable` is not, since it parks `Thread` references which cannot be shared across ractors.
+> `Atom`, `AtomicBoolean`, and `AtomicCountDownLatch` are Ractor-safe in Ruby 4.0+. `AtomicConditionVariable` and
+> `AtomicQueue` are not, since they hold mutable references (parked `Thread`s and queued values, respectively) which
+> cannot be shared across ractors.
 
 ## Benchmarks
 
@@ -231,9 +254,9 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 ```
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atom_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -241,9 +264,9 @@ Concurrent Ruby Atomic Bank Account Balance: 975
 Atomic Ruby Atomic Bank Account Balance:     975
 
 Benchmark Results:
-Synchronized Bank Account:           5.109724 seconds
-Concurrent Ruby Atomic Bank Account: 5.137749 seconds
-Atomic Ruby Atomic Bank Account:     5.101637 seconds
+Synchronized Bank Account:           5.117072 seconds
+Concurrent Ruby Atomic Bank Account: 5.128366 seconds
+Atomic Ruby Atomic Bank Account:     5.110595 seconds
 ```
 
 </details>
@@ -322,23 +345,23 @@ end
 ```
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_boolean_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Warming up --------------------------------------
-          Synchronized Boolean Toggle   167.000 i/100ms
-Concurrent Ruby Atomic Boolean Toggle   132.000 i/100ms
-    Atomic Ruby Atomic Boolean Toggle   117.000 i/100ms
+          Synchronized Boolean Toggle   157.000 i/100ms
+Concurrent Ruby Atomic Boolean Toggle   134.000 i/100ms
+    Atomic Ruby Atomic Boolean Toggle   120.000 i/100ms
 Calculating -------------------------------------
-          Synchronized Boolean Toggle      1.653k (± 2.0%) i/s  (605.04 μs/i) -      8.350k in   5.052096s
-Concurrent Ruby Atomic Boolean Toggle      1.313k (± 2.1%) i/s  (761.45 μs/i) -      6.600k in   5.025579s
-    Atomic Ruby Atomic Boolean Toggle      1.230k (± 4.8%) i/s  (812.86 μs/i) -      6.201k in   5.040557s
+          Synchronized Boolean Toggle      1.629k (± 2.0%) i/s  (613.87 μs/i) -      8.164k in   5.011636s
+Concurrent Ruby Atomic Boolean Toggle      1.325k (± 2.0%) i/s  (754.96 μs/i) -      6.700k in   5.058203s
+    Atomic Ruby Atomic Boolean Toggle      1.190k (± 2.6%) i/s  (840.11 μs/i) -      6.000k in   5.040665s
 
 Comparison:
-          Synchronized Boolean Toggle:     1652.8 i/s
-Concurrent Ruby Atomic Boolean Toggle:     1313.3 i/s - 1.26x  slower
-    Atomic Ruby Atomic Boolean Toggle:     1230.2 i/s - 1.34x  slower
+          Synchronized Boolean Toggle:     1629.0 i/s
+Concurrent Ruby Atomic Boolean Toggle:     1324.6 i/s - 1.23x  slower
+    Atomic Ruby Atomic Boolean Toggle:     1190.3 i/s - 1.37x  slower
 ```
 
 </details>
@@ -406,19 +429,95 @@ end
 ```
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_condition_variable_benchmark.rb
 
-ruby version:        ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.13.0
+ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
+atomic-ruby version: 0.14.0
 
 Warming up --------------------------------------
-      Synchronized Condition Variable Wait/Signal     3.847k i/100ms
-Atomic Ruby Atomic Condition Variable Wait/Signal     3.704k i/100ms
+      Synchronized Condition Variable Wait/Signal     3.977k i/100ms
+Atomic Ruby Atomic Condition Variable Wait/Signal     3.885k i/100ms
 Calculating -------------------------------------
-      Synchronized Condition Variable Wait/Signal     38.661k (± 4.4%) i/s   (25.87 μs/i) -    196.197k in   5.074793s
-Atomic Ruby Atomic Condition Variable Wait/Signal     37.895k (± 4.7%) i/s   (26.39 μs/i) -    192.608k in   5.082648s
+      Synchronized Condition Variable Wait/Signal     39.458k (± 4.2%) i/s   (25.34 μs/i) -    198.850k in   5.039596s
+Atomic Ruby Atomic Condition Variable Wait/Signal     39.046k (± 4.2%) i/s   (25.61 μs/i) -    198.135k in   5.074411s
 
 Comparison:
-      Synchronized Condition Variable Wait/Signal:    38661.1 i/s
-Atomic Ruby Atomic Condition Variable Wait/Signal:    37895.2 i/s - same-ish: difference falls within error
+      Synchronized Condition Variable Wait/Signal:    39457.5 i/s
+Atomic Ruby Atomic Condition Variable Wait/Signal:    39045.9 i/s - same-ish: difference falls within error
+```
+
+</details>
+
+<details>
+
+<summary>AtomicQueue</summary>
+
+```ruby
+# frozen_string_literal: true
+
+require "benchmark/ips"
+require_relative "../lib/atomic-ruby"
+
+module Benchmark
+  module IPS
+    class Job
+      class StreamReport
+        def start_warming
+          @out.puts "\n"
+          @out.puts "ruby version:        #{RUBY_DESCRIPTION}"
+          @out.puts "atomic-ruby version: #{AtomicRuby::VERSION}"
+          @out.puts "\n"
+          @out.puts "Warming up --------------------------------------"
+        end
+      end
+    end
+  end
+end
+
+Benchmark.ips do |x|
+  x.report("Synchronized Queue Push/Pop") do
+    queue = Thread::Queue.new
+    20.times.map do
+      Thread.new do
+        100.times do |i|
+          queue.push(i)
+          queue.pop(true) rescue nil
+        end
+      end
+    end.each(&:join)
+  end
+
+  x.report("Atomic Ruby Atomic Queue Push/Pop") do
+    queue = AtomicQueue.new
+    20.times.map do
+      Thread.new do
+        100.times do |i|
+          queue.push(i)
+          queue.pop
+        end
+      end
+    end.each(&:join)
+  end
+
+  x.compare!
+end
+```
+
+```
+> bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_queue_benchmark.rb
+
+ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
+atomic-ruby version: 0.14.0
+
+Warming up --------------------------------------
+      Synchronized Queue Push/Pop   181.000 i/100ms
+Atomic Ruby Atomic Queue Push/Pop   132.000 i/100ms
+Calculating -------------------------------------
+      Synchronized Queue Push/Pop      1.845k (± 2.1%) i/s  (541.91 μs/i) -      9.231k in   5.002394s
+Atomic Ruby Atomic Queue Push/Pop      1.431k (± 6.8%) i/s  (698.64 μs/i) -      7.260k in   5.072143s
+
+Comparison:
+      Synchronized Queue Push/Pop:     1845.3 i/s
+Atomic Ruby Atomic Queue Push/Pop:     1431.3 i/s - 1.29x  slower
+
 ```
 
 </details>
@@ -474,13 +573,13 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 ```
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_thread_pool_benchmark.rb
 
-ruby version:            ruby 4.0.5 (2026-05-20 revision 64336ffd0e) +YJIT +PRISM [arm64-darwin23]
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.13.0
+atomic-ruby version:     0.14.0
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.792203 seconds
-Atomic Ruby Atomic Thread Pool: 5.504388 seconds
+Concurrent Ruby Thread Pool:    5.078227 seconds
+Atomic Ruby Atomic Thread Pool: 4.824681 seconds
 ```
 
 </details>
