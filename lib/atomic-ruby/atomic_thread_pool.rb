@@ -87,7 +87,7 @@ module AtomicRuby
       @queue = AtomicQueue.new
       @shutdown = AtomicBoolean.new(false)
       @work_available = AtomicConditionVariable.new
-      @started_thread_count = Atom.new(0)
+      @alive_thread_count = Atom.new(0)
       @active_thread_count = Atom.new(0)
       @threads = []
 
@@ -140,7 +140,7 @@ module AtomicRuby
     #
     # @rbs () -> Integer
     def length
-      @threads.select(&:alive?).length
+      @alive_thread_count.value
     end
     # Alias for {#length}.
     #
@@ -244,39 +244,43 @@ module AtomicRuby
           thread_name << " for #{@name}" if @name
           Thread.current.name = thread_name
 
-          @started_thread_count.swap { |current_count| current_count + 1 }
+          @alive_thread_count.swap { |current_count| current_count + 1 }
 
-          loop do
-            work = nil
-            should_shutdown = false
+          begin
+            loop do
+              work = nil
+              should_shutdown = false
 
-            @work_available.wait do
-              work = @queue.pop
-              should_shutdown = @shutdown.true? && @queue.empty? unless work
-              work || should_shutdown
-            end
-
-            break if should_shutdown
-
-            @active_thread_count.swap { |current_count| current_count + 1 }
-            begin
-              work.call
-            rescue => err
-              if @on_error
-                @on_error.call(err)
-              else
-                warn "#{thread_name} rescued:"
-                warn err.full_message
+              @work_available.wait do
+                work = @queue.pop
+                should_shutdown = @shutdown.true? && @queue.empty? unless work
+                work || should_shutdown
               end
-            ensure
-              @active_thread_count.swap { |current_count| current_count - 1 }
+
+              break if should_shutdown
+
+              @active_thread_count.swap { |current_count| current_count + 1 }
+              begin
+                work.call
+              rescue => err
+                if @on_error
+                  @on_error.call(err)
+                else
+                  warn "#{thread_name} rescued:"
+                  warn err.full_message
+                end
+              ensure
+                @active_thread_count.swap { |current_count| current_count - 1 }
+              end
             end
+          ensure
+            @alive_thread_count.swap { |current_count| current_count - 1 }
           end
         end
       end
       @threads.freeze
 
-      Thread.pass until @started_thread_count.value == @size
+      Thread.pass until @alive_thread_count.value == @size
     end
   end
 end
