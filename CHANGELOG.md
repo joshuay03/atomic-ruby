@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.14.1] - 2026-08-20
+
 - Fix O(n) in `AtomicThreadPool#length` by tracking the alive count
 
 ## [0.14.0] - 2026-08-15

@@ -256,7 +256,7 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+atomic-ruby version:     0.14.1
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -347,7 +347,7 @@ end
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+atomic-ruby version:     0.14.1
 
 Warming up --------------------------------------
           Synchronized Boolean Toggle   157.000 i/100ms
@@ -430,7 +430,7 @@ end
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_condition_variable_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.14.0
+atomic-ruby version: 0.14.1
 
 Warming up --------------------------------------
       Synchronized Condition Variable Wait/Signal     3.977k i/100ms
@@ -505,7 +505,7 @@ end
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_queue_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.14.0
+atomic-ruby version: 0.14.1
 
 Warming up --------------------------------------
       Synchronized Queue Push/Pop   181.000 i/100ms
@@ -574,12 +574,12 @@ puts "Atomic Ruby Atomic Thread Pool: #{results[1].real.round(6)} seconds"
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_thread_pool_benchmark.rb
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+concurrent-ruby version: 1.3.8
+atomic-ruby version:     0.14.1
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.078227 seconds
-Atomic Ruby Atomic Thread Pool: 4.824681 seconds
+Concurrent Ruby Thread Pool:    5.046895 seconds
+Atomic Ruby Atomic Thread Pool: 4.717221 seconds
 ```
 
 </details>
