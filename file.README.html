@@ -282,7 +282,7 @@ cannot be shared across ractors.</p>
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+atomic-ruby version:     0.14.1
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -366,7 +366,7 @@ Atomic Ruby Atomic Bank Account:     5.110595 seconds
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+atomic-ruby version:     0.14.1
 
 Warming up --------------------------------------
           Synchronized Boolean Toggle   157.000 i/100ms
@@ -442,7 +442,7 @@ Concurrent Ruby Atomic Boolean Toggle:     1324.6 i/s - 1.23x  slower
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_condition_variable_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.14.0
+atomic-ruby version: 0.14.1
 
 Warming up --------------------------------------
       Synchronized Condition Variable Wait/Signal     3.977k i/100ms
@@ -510,7 +510,7 @@ Atomic Ruby Atomic Condition Variable Wait/Signal:    39045.9 i/s - same-ish: di
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_queue_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.14.0
+atomic-ruby version: 0.14.1
 
 Warming up --------------------------------------
       Synchronized Queue Push/Pop   181.000 i/100ms
@@ -571,12 +571,12 @@ Atomic Ruby Atomic Queue Push/Pop:     1431.3 i/s - 1.29x  slower
 <pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_thread_pool_benchmark.rb
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-concurrent-ruby version: 1.3.6
-atomic-ruby version:     0.14.0
+concurrent-ruby version: 1.3.8
+atomic-ruby version:     0.14.1
 
 Benchmark Results:
-Concurrent Ruby Thread Pool:    5.078227 seconds
-Atomic Ruby Atomic Thread Pool: 4.824681 seconds
+Concurrent Ruby Thread Pool:    5.046895 seconds
+Atomic Ruby Atomic Thread Pool: 4.717221 seconds
 </code></pre>
 </details>
 <h2 id="Development">Development</h2>
@@ -596,7 +596,7 @@ intended to be a safe, welcoming space for collaboration, and contributors are e
 follow the <a href="https://github.com/[joshuay03]/atomic-ruby/blob/main/CODE_OF_CONDUCT.md">code of conduct</a>.</p></div></div>
 
       <div id="footer">
-  Generated on Thu Aug 20 10:18:31 2026 by
+  Generated on Thu Aug 20 10:20:19 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
