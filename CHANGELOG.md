@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.15.0] - 2026-08-29
+
 - Add adaptive scaling to `AtomicThreadPool` with `max_size:`
 
 ## [0.14.1] - 2026-08-20
