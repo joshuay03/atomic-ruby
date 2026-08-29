@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add adaptive scaling to `AtomicThreadPool` with `max_size:`
+
 ## [0.14.1] - 2026-08-20
 
 - Fix O(n) in `AtomicThreadPool#length` by tracking the alive count

@@ -7,11 +7,13 @@ require_relative "atomic_condition_variable"
 require_relative "atomic_queue"
 
 module AtomicRuby
-  # Provides a fixed-size thread pool using atomic operations for work queuing.
+  # Provides a thread pool using atomic operations for work queuing.
   #
-  # AtomicThreadPool maintains a fixed number of worker threads that process
-  # work items from an {AtomicQueue}. Both enqueueing and dequeueing are O(1)
-  # and lock-free, so concurrent producers and consumers never block one
+  # AtomicThreadPool maintains a baseline number of worker threads that process
+  # work items from an {AtomicQueue}. When `max_size` is provided, it can
+  # temporarily add workers when work remains queued and its workers spend most
+  # of their time blocked outside the GVL. Both enqueueing and dequeueing are
+  # O(1) and lock-free, so concurrent producers and consumers never block one
   # another.
   #
   # @example Basic usage
@@ -31,6 +33,11 @@ module AtomicRuby
   #   pool.shutdown
   #   puts results.sort #=> [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
   #
+  # @example Scaling for blocking work
+  #   pool = AtomicThreadPool.new(size: 2, max_size: 8)
+  #   20.times { pool << proc { Net::HTTP.get(uri) } }
+  #   pool.shutdown
+  #
   # @example Monitoring pool state
   #   pool = AtomicThreadPool.new(size: 3)
   #   puts pool.length        #=> 3
@@ -44,6 +51,12 @@ module AtomicRuby
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
+    AUTOSCALE_GROWTH_SAMPLES = 3
+    AUTOSCALE_IDLE_TIME = 1
+    AUTOSCALE_INTERVAL = 0.01
+    AUTOSCALE_WINDOW = 0.05
+    private_constant :AUTOSCALE_GROWTH_SAMPLES, :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INTERVAL, :AUTOSCALE_WINDOW
+
     class Error < StandardError; end
 
     # Error raised when attempting to enqueue work after shutdown.
@@ -52,15 +65,25 @@ module AtomicRuby
       def message = "cannot queue work after shutdown"
     end
 
-    # Creates a new thread pool with the specified size.
+    # Creates a new thread pool with the specified baseline size.
     #
-    # @param size [Integer] The number of worker threads to create (must be positive)
+    # When `max_size` is greater than `size`, the pool adds temporary workers
+    # if work remains queued while its active workers spend most of their time
+    # blocked outside the GVL, but not when they are waiting for the GVL.
+    # Temporary workers leave after the queue remains empty, returning the pool
+    # to its baseline size. Omitting `max_size` creates a fixed-size pool.
+    #
+    # @param size [Integer] The baseline number of worker threads (must be positive)
+    # @param max_size [Integer, Float, nil] Maximum number of worker threads,
+    #   `Float::INFINITY` for no limit, or nil for a fixed-size pool
     # @param name [String, nil] Optional name for the thread pool (used in thread names)
     # @param on_error [Proc, nil] Optional error handler called with the exception when
     #   a work item raises. Receives the exception as its argument. When nil, errors
     #   are printed to stderr
     #
     # @raise [ArgumentError] if size is not a positive integer
+    # @raise [ArgumentError] if max_size is not an integer greater than or equal
+    #   to size or `Float::INFINITY`
     # @raise [ArgumentError] if name is provided but not a string
     # @raise [ArgumentError] if on_error is provided but not a Proc
     #
@@ -70,17 +93,23 @@ module AtomicRuby
     # @example Create a named pool
     #   pool = AtomicThreadPool.new(size: 2, name: "Database Workers")
     #
+    # @example Create an adaptive pool
+    #   pool = AtomicThreadPool.new(size: 2, max_size: 8)
+    #
     # @example Create a pool with a custom error handler
     #   errors = []
     #   pool = AtomicThreadPool.new(size: 2, on_error: ->(err) { errors << err })
     #
-    # @rbs (size: Integer, ?name: String?, ?on_error: Proc?) -> void
-    def initialize(size:, name: nil, on_error: nil)
+    # @rbs (size: Integer, ?max_size: (Integer | Float)?, ?name: String?, ?on_error: Proc?) -> void
+    def initialize(size:, max_size: nil, name: nil, on_error: nil)
       raise ArgumentError, "size must be a positive Integer" unless size.is_a?(Integer) && size > 0
+      valid_max_size = max_size.nil? || max_size == Float::INFINITY || (max_size.is_a?(Integer) && max_size >= size)
+      raise ArgumentError, "max_size must be an Integer greater than or equal to size or Float::INFINITY" unless valid_max_size
       raise ArgumentError, "name must be a String" unless name.nil? || name.is_a?(String)
       raise ArgumentError, "on_error must be a Proc" unless on_error.nil? || on_error.is_a?(Proc)
 
       @size = size
+      @max_size = max_size || size
       @name = name
       @on_error = on_error
 
@@ -90,6 +119,12 @@ module AtomicRuby
       @alive_thread_count = Atom.new(0)
       @active_thread_count = Atom.new(0)
       @threads = []
+      @next_thread_number = 0
+      if adaptive?
+        @autoscale_available = AtomicConditionVariable.new
+        @trim_requested = AtomicBoolean.new(false)
+        @thread_pool_monitor = ThreadPoolMonitor.new
+      end
 
       start
     end
@@ -120,15 +155,17 @@ module AtomicRuby
     def <<(work)
       raise EnqueuedWorkAfterShutdownError if @shutdown.true?
 
+      @trim_requested&.make_false
       @queue.push(work)
       @work_available.signal
+      @autoscale_available&.signal
     end
 
     # Returns the number of currently alive worker threads.
     #
     # This count decreases as the pool shuts down and threads terminate.
-    # During normal operation, this should equal the size parameter
-    # passed to the constructor.
+    # An adaptive pool may report a value between the `size` and `max_size`
+    # parameters passed to the constructor.
     #
     # @return [Integer] The number of alive worker threads
     #
@@ -222,7 +259,9 @@ module AtomicRuby
       return if @shutdown.true?
 
       @shutdown.make_true
+      @autoscale_available&.broadcast
       @work_available.broadcast
+      @autoscaler&.join
       @threads.each(&:join)
     end
 
@@ -238,49 +277,186 @@ module AtomicRuby
     #
     # @rbs () -> void
     def start
-      @size.times do |num|
-        @threads << Thread.new(num) do |idx|
-          thread_name = String.new("AtomicThreadPool thread #{idx}")
+      @size.times { spawn_worker }
+
+      if adaptive?
+        @autoscaler = Thread.new do
+          thread_name = String.new("AtomicThreadPool autoscaler")
           thread_name << " for #{@name}" if @name
           Thread.current.name = thread_name
-
-          @alive_thread_count.swap { |current_count| current_count + 1 }
-
-          begin
-            loop do
-              work = nil
-              should_shutdown = false
-
-              @work_available.wait do
-                work = @queue.pop
-                should_shutdown = @shutdown.true? && @queue.empty? unless work
-                work || should_shutdown
-              end
-
-              break if should_shutdown
-
-              @active_thread_count.swap { |current_count| current_count + 1 }
-              begin
-                work.call
-              rescue => err
-                if @on_error
-                  @on_error.call(err)
-                else
-                  warn "#{thread_name} rescued:"
-                  warn err.full_message
-                end
-              ensure
-                @active_thread_count.swap { |current_count| current_count - 1 }
-              end
-            end
-          ensure
-            @alive_thread_count.swap { |current_count| current_count - 1 }
-          end
+          autoscale
         end
       end
-      @threads.freeze
 
       Thread.pass until @alive_thread_count.value == @size
+    end
+
+    # Returns whether the pool may grow beyond its baseline size.
+    #
+    # @return [true, false]
+    #
+    # @rbs () -> bool
+    def adaptive?
+      @max_size > @size
+    end
+
+    # Creates a worker thread.
+    #
+    # Temporary workers leave after the queue remains empty.
+    #
+    # @param temporary [true, false] whether the worker belongs above the baseline
+    # @return [Thread]
+    #
+    # @rbs (?temporary: bool) -> Thread
+    def spawn_worker(temporary: false)
+      thread_number = @next_thread_number
+      @next_thread_number += 1
+
+      thread = Thread.new(thread_number) do |idx|
+        thread_name = String.new("AtomicThreadPool thread #{idx}")
+        thread_name << " for #{@name}" if @name
+        Thread.current.name = thread_name
+
+        @thread_pool_monitor&.register_worker
+        @alive_thread_count.swap { |current_count| current_count + 1 }
+
+        begin
+          loop do
+            work = nil
+            should_exit = false
+
+            @work_available.wait do
+              work = @queue.pop
+              unless work
+                should_exit = @shutdown.true? && @queue.empty?
+                should_exit ||= temporary && @trim_requested.true? && @queue.empty?
+              end
+              work || should_exit
+            end
+
+            break if should_exit
+
+            @active_thread_count.swap { |current_count| current_count + 1 }
+            begin
+              @thread_pool_monitor&.start_work
+              work.call
+            rescue => err
+              if @on_error
+                @on_error.call(err)
+              else
+                warn "#{thread_name} rescued:"
+                warn err.full_message
+              end
+            ensure
+              @thread_pool_monitor&.stop_work
+              @active_thread_count.swap { |current_count| current_count - 1 }
+            end
+          end
+        ensure
+          @alive_thread_count.swap { |current_count| current_count - 1 }
+          @thread_pool_monitor&.unregister_worker
+        end
+      end
+
+      @threads << thread
+      thread
+    end
+
+    # Adds temporary workers while queued work is held up by blocked workers.
+    #
+    # @return [void]
+    #
+    # @rbs () -> void
+    def autoscale
+      previous_snapshot = @thread_pool_monitor.snapshot
+      pressure_started_at = nil
+      idle_started_at = nil
+      growth_samples = 0
+      phase_samples = [0, 0, 0]
+
+      loop do
+        @autoscale_available.wait do
+          @shutdown.true? || !@queue.empty? || @alive_thread_count.value > @size
+        end
+        break if @shutdown.true?
+
+        now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        snapshot = @thread_pool_monitor.snapshot
+
+        if @queue.empty?
+          pressure_started_at = nil
+          previous_snapshot = snapshot
+          idle_started_at ||= now
+          growth_samples = 0
+          phase_samples.fill(0)
+
+          if now - idle_started_at >= AUTOSCALE_IDLE_TIME
+            @trim_requested.make_true
+            @work_available.broadcast
+          end
+        else
+          @trim_requested.make_false
+          idle_started_at = nil
+
+          if pressure_started_at.nil?
+            previous_snapshot = snapshot
+            pressure_started_at = now
+            phase_samples.fill(0)
+          elsif now - pressure_started_at >= AUTOSCALE_WINDOW
+            if should_grow?(previous_snapshot, snapshot, phase_samples)
+              growth_samples += 1
+              if growth_samples >= AUTOSCALE_GROWTH_SAMPLES
+                spawn_worker(temporary: true)
+                growth_samples = 0
+              end
+            else
+              growth_samples = 0
+            end
+            previous_snapshot = snapshot
+            pressure_started_at = now
+            phase_samples.fill(0)
+          else
+            3.times { |index| phase_samples[index] += snapshot[index] }
+          end
+        end
+
+        sleep AUTOSCALE_INTERVAL
+      end
+    end
+
+    # Returns whether another worker is likely to improve throughput.
+    #
+    # Requiring workers to spend a majority of their time blocked outside the
+    # GVL recognizes blocking operations. The pool only grows when less than
+    # two percent of their time was spent waiting for the GVL.
+    #
+    # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
+    # @param snapshot [Array<Integer>] current GVL state snapshot
+    # @param phase_samples [Array<Integer>] sampled current GVL states
+    # @return [true, false]
+    #
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
+    def should_grow?(previous_snapshot, snapshot, phase_samples)
+      @threads.select!(&:alive?)
+      workers = @threads
+      return false if workers.length >= @max_size
+      return false if @active_thread_count.value < workers.length
+
+      _running_count, _waiting_count, _blocked_count, running_time, waiting_time, blocked_time = snapshot
+      running_time -= previous_snapshot[3]
+      waiting_time -= previous_snapshot[4]
+      blocked_time -= previous_snapshot[5]
+      total_time = running_time + waiting_time + blocked_time
+
+      minimum_measured_time = (AUTOSCALE_WINDOW * 1_000_000_000 * workers.length / 2).to_i
+      if total_time < minimum_measured_time
+        running_time, waiting_time, blocked_time = phase_samples
+        total_time = running_time + waiting_time + blocked_time
+      end
+
+      total_time.positive? &&
+        waiting_time * 50 < total_time &&
+        blocked_time * 2 > total_time
     end
   end
 end

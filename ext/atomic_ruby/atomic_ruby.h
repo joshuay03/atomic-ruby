@@ -3,7 +3,11 @@
 
 #include "ruby.h"
 #include "ruby/atomic.h"
+#include "ruby/thread.h"
 #include "ruby/version.h"
+
+#include <stdatomic.h>
+#include <time.h>
 
 #if RUBY_API_VERSION_CODE >= 40000
 #define ATOMIC_RUBY_RACTOR_SAFE 1

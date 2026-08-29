@@ -27,6 +27,16 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_init_with_invalid_max_size
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 2, max_size: 1)
+    end
+
+    assert_raises ArgumentError do
+      AtomicThreadPool.new(size: 2, max_size: 2.5)
+    end
+  end
+
   def test_init_with_invalid_name
     assert_raises ArgumentError do
       AtomicThreadPool.new(size: 2, name: 123)
@@ -44,6 +54,32 @@ class TestAtomicThreadPool < Minitest::Test
       pool = AtomicThreadPool.new(size: 2)
       refute Ractor.shareable?(pool)
       pool.shutdown
+    end
+
+    def test_scales_up_in_multiple_ractors
+      ractors = 2.times.map do
+        Ractor.new do
+          release = AtomicBoolean.new(false)
+          pool = AtomicThreadPool.new(size: 1, max_size: 2)
+          2.times { pool << proc { sleep 0.5 until release.true? } }
+
+          begin
+            deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+            until pool.size == 2
+              raise "timed out waiting for condition" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+              sleep 0.001
+            end
+
+            pool.size
+          ensure
+            release.make_true
+            pool.shutdown
+          end
+        end
+      end
+
+      assert_equal [2, 2], ractors.map(&:value)
     end
   end
 
@@ -119,10 +155,88 @@ class TestAtomicThreadPool < Minitest::Test
   def test_active_count
     should_sleep = AtomicBoolean.new(true)
     pool = AtomicThreadPool.new(size: 2)
-    pool << proc { sleep 0.1 while should_sleep.true?}
+    pool << proc { sleep 0.1 while should_sleep.true? }
     sleep 0.1
     assert_equal 1, pool.active_count
     should_sleep.make_false
     pool.shutdown
+  end
+
+  def test_scales_up_for_blocking_work
+    release = AtomicBoolean.new(false)
+    pool = AtomicThreadPool.new(size: 1, max_size: Float::INFINITY)
+    3.times { pool << proc { sleep 0.5 until release.true? } }
+
+    begin
+      wait_until { pool.size == 3 && pool.active_count == 3 }
+      assert_equal 3, pool.active_count
+    ensure
+      release.make_true
+      pool.shutdown
+    end
+  end
+
+  def test_does_not_scale_up_for_cpu_bound_work
+    release = AtomicBoolean.new(false)
+    pool = AtomicThreadPool.new(size: 1, max_size: 3)
+    pool << proc { 1 while release.false? }
+    pool << proc {}
+
+    begin
+      wait_until { pool.active_count == 1 && pool.queue_size == 1 }
+      sleep 0.3
+      assert_equal 1, pool.size
+    ensure
+      release.make_true
+      pool.shutdown
+    end
+  end
+
+  def test_does_not_scale_up_for_cpu_bound_work_with_short_waits
+    release = AtomicBoolean.new(false)
+    pool = AtomicThreadPool.new(size: 2, max_size: 4)
+    4.times do
+      pool << proc do
+        until release.true?
+          10_000.times.sum { |index| index * 2 }
+          sleep 0.0001
+        end
+      end
+    end
+
+    begin
+      wait_until { pool.active_count == 2 && pool.queue_size == 2 }
+      sleep 0.3
+      assert_equal 2, pool.size
+    ensure
+      release.make_true
+      pool.shutdown
+    end
+  end
+
+  def test_scales_down_after_blocking_work
+    release = AtomicBoolean.new(false)
+    pool = AtomicThreadPool.new(size: 1, max_size: 3)
+    3.times { pool << proc { sleep 0.5 until release.true? } }
+
+    begin
+      wait_until { pool.size == 3 }
+      release.make_true
+      wait_until { pool.size == 1 }
+    ensure
+      release.make_true
+      pool.shutdown
+    end
+  end
+
+  private
+
+  def wait_until(timeout: 5)
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+    until yield
+      raise "timed out waiting for condition" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+      sleep 0.001
+    end
   end
 end

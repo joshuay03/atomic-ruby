@@ -1,11 +1,13 @@
 # Generated from lib/atomic-ruby/atomic_thread_pool.rb with RBS::Inline
 
 module AtomicRuby
-  # Provides a fixed-size thread pool using atomic operations for work queuing.
+  # Provides a thread pool using atomic operations for work queuing.
   #
-  # AtomicThreadPool maintains a fixed number of worker threads that process
-  # work items from an {AtomicQueue}. Both enqueueing and dequeueing are O(1)
-  # and lock-free, so concurrent producers and consumers never block one
+  # AtomicThreadPool maintains a baseline number of worker threads that process
+  # work items from an {AtomicQueue}. When `max_size` is provided, it can
+  # temporarily add workers when work remains queued and its workers spend most
+  # of their time blocked outside the GVL. Both enqueueing and dequeueing are
+  # O(1) and lock-free, so concurrent producers and consumers never block one
   # another.
   #
   # @example Basic usage
@@ -25,6 +27,11 @@ module AtomicRuby
   #   pool.shutdown
   #   puts results.sort #=> [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
   #
+  # @example Scaling for blocking work
+  #   pool = AtomicThreadPool.new(size: 2, max_size: 8)
+  #   20.times { pool << proc { Net::HTTP.get(uri) } }
+  #   pool.shutdown
+  #
   # @example Monitoring pool state
   #   pool = AtomicThreadPool.new(size: 3)
   #   puts pool.length        #=> 3
@@ -38,6 +45,14 @@ module AtomicRuby
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
+    AUTOSCALE_GROWTH_SAMPLES: ::Integer
+
+    AUTOSCALE_IDLE_TIME: ::Integer
+
+    AUTOSCALE_INTERVAL: ::Float
+
+    AUTOSCALE_WINDOW: ::Float
+
     class Error < StandardError
     end
 
@@ -47,15 +62,25 @@ module AtomicRuby
       def message: () -> String
     end
 
-    # Creates a new thread pool with the specified size.
+    # Creates a new thread pool with the specified baseline size.
     #
-    # @param size [Integer] The number of worker threads to create (must be positive)
+    # When `max_size` is greater than `size`, the pool adds temporary workers
+    # if work remains queued while its active workers spend most of their time
+    # blocked outside the GVL, but not when they are waiting for the GVL.
+    # Temporary workers leave after the queue remains empty, returning the pool
+    # to its baseline size. Omitting `max_size` creates a fixed-size pool.
+    #
+    # @param size [Integer] The baseline number of worker threads (must be positive)
+    # @param max_size [Integer, Float, nil] Maximum number of worker threads,
+    #   `Float::INFINITY` for no limit, or nil for a fixed-size pool
     # @param name [String, nil] Optional name for the thread pool (used in thread names)
     # @param on_error [Proc, nil] Optional error handler called with the exception when
     #   a work item raises. Receives the exception as its argument. When nil, errors
     #   are printed to stderr
     #
     # @raise [ArgumentError] if size is not a positive integer
+    # @raise [ArgumentError] if max_size is not an integer greater than or equal
+    #   to size or `Float::INFINITY`
     # @raise [ArgumentError] if name is provided but not a string
     # @raise [ArgumentError] if on_error is provided but not a Proc
     #
@@ -65,12 +90,15 @@ module AtomicRuby
     # @example Create a named pool
     #   pool = AtomicThreadPool.new(size: 2, name: "Database Workers")
     #
+    # @example Create an adaptive pool
+    #   pool = AtomicThreadPool.new(size: 2, max_size: 8)
+    #
     # @example Create a pool with a custom error handler
     #   errors = []
     #   pool = AtomicThreadPool.new(size: 2, on_error: ->(err) { errors << err })
     #
-    # @rbs (size: Integer, ?name: String?, ?on_error: Proc?) -> void
-    def initialize: (size: Integer, ?name: String?, ?on_error: Proc?) -> void
+    # @rbs (size: Integer, ?max_size: (Integer | Float)?, ?name: String?, ?on_error: Proc?) -> void
+    def initialize: (size: Integer, ?max_size: (Integer | Float)?, ?name: String?, ?on_error: Proc?) -> void
 
     # Enqueues work to be executed by the thread pool.
     #
@@ -100,8 +128,8 @@ module AtomicRuby
     # Returns the number of currently alive worker threads.
     #
     # This count decreases as the pool shuts down and threads terminate.
-    # During normal operation, this should equal the size parameter
-    # passed to the constructor.
+    # An adaptive pool may report a value between the `size` and `max_size`
+    # parameters passed to the constructor.
     #
     # @return [Integer] The number of alive worker threads
     #
@@ -201,6 +229,44 @@ module AtomicRuby
     #
     # @rbs () -> void
     def start: () -> void
+
+    # Returns whether the pool may grow beyond its baseline size.
+    #
+    # @return [true, false]
+    #
+    # @rbs () -> bool
+    def adaptive?: () -> bool
+
+    # Creates a worker thread.
+    #
+    # Temporary workers leave after the queue remains empty.
+    #
+    # @param temporary [true, false] whether the worker belongs above the baseline
+    # @return [Thread]
+    #
+    # @rbs (?temporary: bool) -> Thread
+    def spawn_worker: (?temporary: bool) -> Thread
+
+    # Adds temporary workers while queued work is held up by blocked workers.
+    #
+    # @return [void]
+    #
+    # @rbs () -> void
+    def autoscale: () -> void
+
+    # Returns whether another worker is likely to improve throughput.
+    #
+    # Requiring workers to spend a majority of their time blocked outside the
+    # GVL recognizes blocking operations. The pool only grows when less than
+    # two percent of their time was spent waiting for the GVL.
+    #
+    # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
+    # @param snapshot [Array<Integer>] current GVL state snapshot
+    # @param phase_samples [Array<Integer>] sampled current GVL states
+    # @return [true, false]
+    #
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
+    def should_grow?: (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
   end
 end
 

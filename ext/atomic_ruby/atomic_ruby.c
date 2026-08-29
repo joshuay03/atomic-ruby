@@ -521,6 +521,178 @@ static VALUE rb_cAtomicConditionVariable_waiter_count(VALUE self) {
   return UINT2NUM((unsigned int)RUBY_ATOMIC_LOAD(atomic_ruby_condition_variable->count));
 }
 
+typedef enum {
+  ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE,
+  ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING,
+  ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING,
+  ATOMIC_RUBY_THREAD_POOL_WORKER_BLOCKED
+} atomic_ruby_thread_pool_worker_phase_t;
+
+typedef struct {
+  _Atomic unsigned int running_count;
+  _Atomic unsigned int waiting_count;
+  _Atomic unsigned int blocked_count;
+  _Atomic unsigned long long running_time;
+  _Atomic unsigned long long waiting_time;
+  _Atomic unsigned long long blocked_time;
+} atomic_ruby_thread_pool_monitor_t;
+
+typedef struct {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  atomic_ruby_thread_pool_worker_phase_t phase;
+  unsigned long long phase_started_at;
+} atomic_ruby_thread_pool_worker_state_t;
+
+static rb_internal_thread_specific_key_t atomic_ruby_thread_pool_worker_key;
+
+static void atomic_ruby_thread_pool_monitor_free(void *ptr) {
+  xfree(ptr);
+}
+
+static size_t atomic_ruby_thread_pool_monitor_memsize(const void *ptr) {
+  return sizeof(atomic_ruby_thread_pool_monitor_t);
+}
+
+static const rb_data_type_t atomic_ruby_thread_pool_monitor_type = {
+  .wrap_struct_name = "AtomicRuby::ThreadPoolMonitor",
+  .function = {
+    .dfree = atomic_ruby_thread_pool_monitor_free,
+    .dsize = atomic_ruby_thread_pool_monitor_memsize
+  },
+  .flags = RUBY_TYPED_FREE_IMMEDIATELY | RUBY_TYPED_WB_PROTECTED
+};
+
+static unsigned long long atomic_ruby_monotonic_time(void) {
+  struct timespec time;
+  if (clock_gettime(CLOCK_MONOTONIC, &time) == -1) return 0;
+
+  return (unsigned long long)time.tv_sec * 1000000000ULL + (unsigned long long)time.tv_nsec;
+}
+
+static void atomic_ruby_thread_pool_worker_leave_phase(atomic_ruby_thread_pool_worker_state_t *state, unsigned long long now) {
+  unsigned long long elapsed = now != 0 && state->phase_started_at != 0 && now >= state->phase_started_at ? now - state->phase_started_at : 0;
+
+  switch (state->phase) {
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING:
+      atomic_fetch_sub_explicit(&state->monitor->running_count, 1, memory_order_relaxed);
+      atomic_fetch_add_explicit(&state->monitor->running_time, elapsed, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING:
+      atomic_fetch_sub_explicit(&state->monitor->waiting_count, 1, memory_order_relaxed);
+      atomic_fetch_add_explicit(&state->monitor->waiting_time, elapsed, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_BLOCKED:
+      atomic_fetch_sub_explicit(&state->monitor->blocked_count, 1, memory_order_relaxed);
+      atomic_fetch_add_explicit(&state->monitor->blocked_time, elapsed, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE:
+      break;
+  }
+}
+
+static void atomic_ruby_thread_pool_worker_enter_phase(atomic_ruby_thread_pool_worker_state_t *state, atomic_ruby_thread_pool_worker_phase_t phase, unsigned long long now) {
+  state->phase = phase;
+  state->phase_started_at = now;
+
+  switch (phase) {
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING:
+      atomic_fetch_add_explicit(&state->monitor->running_count, 1, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING:
+      atomic_fetch_add_explicit(&state->monitor->waiting_count, 1, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_BLOCKED:
+      atomic_fetch_add_explicit(&state->monitor->blocked_count, 1, memory_order_relaxed);
+      break;
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE:
+      break;
+  }
+}
+
+static void atomic_ruby_thread_pool_event_callback(rb_event_flag_t event, const rb_internal_thread_event_data_t *event_data, void *user_data) {
+  atomic_ruby_thread_pool_worker_state_t *state = rb_internal_thread_specific_get(event_data->thread, atomic_ruby_thread_pool_worker_key);
+  if (state == NULL || state->phase == ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE) return;
+
+  unsigned long long now = atomic_ruby_monotonic_time();
+  atomic_ruby_thread_pool_worker_leave_phase(state, now);
+
+  switch (event) {
+    case RUBY_INTERNAL_THREAD_EVENT_READY:
+      atomic_ruby_thread_pool_worker_enter_phase(state, ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING, now);
+      break;
+    case RUBY_INTERNAL_THREAD_EVENT_RESUMED:
+      atomic_ruby_thread_pool_worker_enter_phase(state, ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING, now);
+      break;
+    case RUBY_INTERNAL_THREAD_EVENT_SUSPENDED:
+      atomic_ruby_thread_pool_worker_enter_phase(state, ATOMIC_RUBY_THREAD_POOL_WORKER_BLOCKED, now);
+      break;
+  }
+}
+
+static VALUE rb_cThreadPoolMonitor_allocate(VALUE klass) {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  VALUE obj = TypedData_Make_Struct(klass, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
+  atomic_init(&monitor->running_count, 0);
+  atomic_init(&monitor->waiting_count, 0);
+  atomic_init(&monitor->blocked_count, 0);
+  atomic_init(&monitor->running_time, 0);
+  atomic_init(&monitor->waiting_time, 0);
+  atomic_init(&monitor->blocked_time, 0);
+  return obj;
+}
+
+static VALUE rb_cThreadPoolMonitor_register_worker(VALUE self) {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  TypedData_Get_Struct(self, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
+
+  VALUE thread = rb_thread_current();
+  atomic_ruby_thread_pool_worker_state_t *state = ALLOC(atomic_ruby_thread_pool_worker_state_t);
+  state->monitor = monitor;
+  state->phase = ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE;
+  state->phase_started_at = 0;
+  rb_internal_thread_specific_set(thread, atomic_ruby_thread_pool_worker_key, state);
+  return Qnil;
+}
+
+static VALUE rb_cThreadPoolMonitor_unregister_worker(VALUE self) {
+  VALUE thread = rb_thread_current();
+  atomic_ruby_thread_pool_worker_state_t *state = rb_internal_thread_specific_get(thread, atomic_ruby_thread_pool_worker_key);
+  if (state == NULL) return Qnil;
+
+  atomic_ruby_thread_pool_worker_leave_phase(state, atomic_ruby_monotonic_time());
+  rb_internal_thread_specific_set(thread, atomic_ruby_thread_pool_worker_key, NULL);
+  xfree(state);
+  return Qnil;
+}
+
+static VALUE rb_cThreadPoolMonitor_start_work(VALUE self) {
+  atomic_ruby_thread_pool_worker_state_t *state = rb_internal_thread_specific_get(rb_thread_current(), atomic_ruby_thread_pool_worker_key);
+  atomic_ruby_thread_pool_worker_enter_phase(state, ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING, atomic_ruby_monotonic_time());
+  return Qnil;
+}
+
+static VALUE rb_cThreadPoolMonitor_stop_work(VALUE self) {
+  atomic_ruby_thread_pool_worker_state_t *state = rb_internal_thread_specific_get(rb_thread_current(), atomic_ruby_thread_pool_worker_key);
+  atomic_ruby_thread_pool_worker_leave_phase(state, atomic_ruby_monotonic_time());
+  state->phase = ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE;
+  return Qnil;
+}
+
+static VALUE rb_cThreadPoolMonitor_snapshot(VALUE self) {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  TypedData_Get_Struct(self, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
+
+  return rb_ary_new_from_args(
+    6,
+    UINT2NUM(atomic_load_explicit(&monitor->running_count, memory_order_relaxed)),
+    UINT2NUM(atomic_load_explicit(&monitor->waiting_count, memory_order_relaxed)),
+    UINT2NUM(atomic_load_explicit(&monitor->blocked_count, memory_order_relaxed)),
+    ULL2NUM(atomic_load_explicit(&monitor->running_time, memory_order_relaxed)),
+    ULL2NUM(atomic_load_explicit(&monitor->waiting_time, memory_order_relaxed)),
+    ULL2NUM(atomic_load_explicit(&monitor->blocked_time, memory_order_relaxed))
+  );
+}
+
 RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
 #ifdef ATOMIC_RUBY_RACTOR_SAFE
   rb_ext_ractor_safe(true);
@@ -563,4 +735,21 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_private_method(rb_cAtomicConditionVariable, "_shift_thread", rb_cAtomicConditionVariable_shift_thread, 0);
   rb_define_private_method(rb_cAtomicConditionVariable, "_drain_threads", rb_cAtomicConditionVariable_drain_threads, 0);
   rb_define_private_method(rb_cAtomicConditionVariable, "_waiter_count", rb_cAtomicConditionVariable_waiter_count, 0);
+
+  atomic_ruby_thread_pool_worker_key = rb_internal_thread_specific_key_create();
+  rb_internal_thread_add_event_hook(
+    atomic_ruby_thread_pool_event_callback,
+    RUBY_INTERNAL_THREAD_EVENT_READY |
+      RUBY_INTERNAL_THREAD_EVENT_RESUMED |
+      RUBY_INTERNAL_THREAD_EVENT_SUSPENDED,
+    NULL
+  );
+  VALUE rb_cThreadPoolMonitor = rb_define_class_under(rb_mAtomicRuby, "ThreadPoolMonitor", rb_cObject);
+  rb_define_alloc_func(rb_cThreadPoolMonitor, rb_cThreadPoolMonitor_allocate);
+  rb_define_method(rb_cThreadPoolMonitor, "register_worker", rb_cThreadPoolMonitor_register_worker, 0);
+  rb_define_method(rb_cThreadPoolMonitor, "unregister_worker", rb_cThreadPoolMonitor_unregister_worker, 0);
+  rb_define_method(rb_cThreadPoolMonitor, "start_work", rb_cThreadPoolMonitor_start_work, 0);
+  rb_define_method(rb_cThreadPoolMonitor, "stop_work", rb_cThreadPoolMonitor_stop_work, 0);
+  rb_define_method(rb_cThreadPoolMonitor, "snapshot", rb_cThreadPoolMonitor_snapshot, 0);
+  rb_funcall(rb_mAtomicRuby, rb_intern("private_constant"), 1, ID2SYM(rb_intern("ThreadPoolMonitor")));
 }

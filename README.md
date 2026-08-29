@@ -120,6 +120,18 @@ p results           #=> [8, 7, 10, 9, 6, 5, 3, 4, 2, 1]
 p results.sort      #=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 ```
 
+Pass `max_size` to let the pool temporarily add workers when queued work is
+held up by blocking operations. The pool measures time spent blocked outside
+the GVL and waiting for it, so it does not add more threads when GVL contention
+is the bottleneck. It returns to `size` when the queue drains.
+
+```ruby
+pool = AtomicThreadPool.new(size: 4, max_size: 16)
+
+# Grow without a limit
+pool = AtomicThreadPool.new(size: 4, max_size: Float::INFINITY)
+```
+
 `AtomicCountDownLatch`:
 
 ```ruby
