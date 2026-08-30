@@ -8,19 +8,10 @@ module AtomicRuby
   #
   # AtomicConditionVariable lets one or more threads park until another
   # thread signals them, without the paired `Mutex` that Ruby's
-  # `ConditionVariable` requires. The set of parked threads is tracked
-  # in a native doubly-linked list, so registering a waiter, removing a
-  # waiter, and shifting the head off for a signal are all O(1) and
-  # allocation-light. Parking still uses `Thread.stop` and
-  # `Thread#wakeup`, which are the standard kernel-level primitives Ruby
-  # exposes for sleeping a thread.
+  # `ConditionVariable` requires.
   #
-  # The lost-wakeup race in a naive `check-then-park` consumer is avoided
-  # by the {#wait} contract: a waiter registers itself before re-evaluating
-  # the predicate, so any signal that fires after the producer makes the
-  # predicate true is guaranteed to see the waiter and wake it. Ruby also
-  # remembers pending wakeups across `Thread.stop`, so a wakeup that
-  # arrives between the predicate check and the actual park is not lost.
+  # Waiters supply a predicate that is checked again after registration,
+  # preventing signals sent after a relevant state change from being lost.
   #
   # @example Basic usage
   #   condvar = AtomicConditionVariable.new
@@ -72,10 +63,6 @@ module AtomicRuby
 
     # Wakes one parked waiter, or no-ops if none are parked.
     #
-    # If a waiter has registered itself but is not yet inside `Thread.stop`,
-    # Ruby remembers the wakeup and the next `Thread.stop` returns
-    # immediately.
-    #
     # @return [true, false] true if a waiter was signalled, false otherwise
     #
     # @example
@@ -93,8 +80,6 @@ module AtomicRuby
 
     # Wakes every parked waiter.
     #
-    # Each woken thread observes the wake the same way as with {#signal}.
-    #
     # @return [Integer] The number of waiters signalled
     #
     # @example
@@ -111,12 +96,10 @@ module AtomicRuby
     # Blocks until the given block returns a truthy value, then returns that
     # value.
     #
-    # The block is evaluated optimistically first. If it returns truthy on
-    # that pass, no waiter is registered and the call returns immediately.
-    # Otherwise the calling thread registers itself, re-evaluates the
-    # block, and parks via `Thread.stop` until a {#signal} or {#broadcast}
-    # wakes it. The block may run more than once and may run concurrently
-    # with a signalling thread.
+    # The block may run more than once and may run concurrently with a
+    # signalling thread. Rechecking it after registration prevents lost
+    # wakeups. Interrupted waits are unregistered before the exception is
+    # propagated.
     #
     # @yieldreturn [untyped] Truthy to wake, falsy to keep waiting
     # @return [untyped] The first truthy value returned by the block
@@ -140,15 +123,19 @@ module AtomicRuby
 
       self_thread = Thread.current
       loop do
-        waiter = _add_waiter(self_thread)
-        result = yield
-        if result
-          _remove_waiter(waiter)
-          return result
-        end
+        Thread.handle_interrupt(Exception => :never) do
+          waiter = _add_waiter(self_thread)
+          begin
+            Thread.handle_interrupt(Exception => :immediate) do
+              result = yield
+              return result if result
 
-        Thread.stop
-        _remove_waiter(waiter)
+              Thread.stop
+            end
+          ensure
+            _remove_waiter(waiter)
+          end
+        end
       end
     end
   end

@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Remove interrupted waiters from `AtomicConditionVariable`
 - Replace `Thread.pass` busy-wait with `sleep` in `AtomicCountDownLatch#wait`
 
 ## [0.15.2] - 2026-08-30

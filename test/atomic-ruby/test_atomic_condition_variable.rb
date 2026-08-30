@@ -61,6 +61,32 @@ class TestAtomicConditionVariable < Minitest::Test
     assert_equal 0, condvar.waiter_count
   end
 
+  def test_wait_removes_interrupted_waiter
+    condvar = AtomicConditionVariable.new
+    waiter = Thread.new { condvar.wait { false } }
+    Thread.pass until condvar.waiter_count == 1
+
+    waiter.kill
+    waiter.join
+
+    assert_equal 0, condvar.waiter_count
+  end
+
+  def test_wait_removes_waiter_when_predicate_raises
+    condvar = AtomicConditionVariable.new
+    predicate_calls = 0
+
+    assert_raises RuntimeError do
+      condvar.wait do
+        predicate_calls += 1
+        raise "oops" if predicate_calls == 2
+
+        false
+      end
+    end
+    assert_equal 0, condvar.waiter_count
+  end
+
   def test_wait_returns_immediately_when_predicate_truthy
     condvar = AtomicConditionVariable.new
     assert_equal :ok, condvar.wait { :ok }
