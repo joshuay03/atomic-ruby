@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.15.1] - 2026-08-30
+
 - Prevent OS scheduling delays from stopping adaptive thread pool growth
 
 ## [0.15.0] - 2026-08-29
