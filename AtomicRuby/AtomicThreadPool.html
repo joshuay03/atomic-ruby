@@ -478,7 +478,7 @@ another.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#should_grow%3F-instance_method" title="#should_grow? (instance method)">#<strong>should_grow?</strong>(previous_snapshot, snapshot, phase_samples)  &#x21d2; true, false </a>
+      <a href="#should_grow%3F-instance_method" title="#should_grow? (instance method)">#<strong>should_grow?</strong>(previous_snapshot, snapshot, phase_samples, elapsed_time)  &#x21d2; true, false </a>
     
 
     
@@ -584,7 +584,8 @@ another.</p>
     <p>Creates a new thread pool with the specified baseline size.</p>
 <p>When <code>max_size</code> is greater than <code>size</code>, the pool adds temporary workers
 if work remains queued while its active workers spend most of their time
-blocked outside the GVL, but not when they are waiting for the GVL.
+blocked outside the GVL, but not when Ruby execution is using the
+available CPU.
 Temporary workers leave after the queue remains empty, returning the pool
 to its baseline size. Omitting <code>max_size</code> creates a fixed-size pool.</p>
 
@@ -797,7 +798,6 @@ to size or <code>Float::INFINITY</code></p></div>
       <pre class="lines">
 
 
-104
 105
 106
 107
@@ -823,10 +823,11 @@ to size or <code>Float::INFINITY</code></p></div>
 127
 128
 129
-130</pre>
+130
+131</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 104</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 105</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>size:</span><span class='comma'>,</span> <span class='label'>max_size:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>on_error:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'>ArgumentError</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>size must be a positive Integer</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='id identifier rubyid_size'>size</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Integer</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_size'>size</span> <span class='op'>&gt;</span> <span class='int'>0</span>
@@ -951,17 +952,17 @@ Enqueueing is O(1) regardless of current queue depth.</p>
       <pre class="lines">
 
 
-155
 156
 157
 158
 159
 160
 161
-162</pre>
+162
+163</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 155</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 156</span>
 
 <span class='kw'>def</span> <span class='op'>&lt;&lt;</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="AtomicThreadPool/EnqueuedWorkAfterShutdownError.html" title="AtomicRuby::AtomicThreadPool::EnqueuedWorkAfterShutdownError (class)">EnqueuedWorkAfterShutdownError</a></span></span> <span class='kw'>if</span> <span class='ivar'>@shutdown</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
@@ -1042,12 +1043,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-232
 233
-234</pre>
+234
+235</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 232</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 233</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_active_count'>active_count</span>
   <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1094,12 +1095,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-299
 300
-301</pre>
+301
+302</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 299</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 300</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_adaptive?'>adaptive?</span>
   <span class='ivar'>@max_size</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
@@ -1133,7 +1134,6 @@ waiting for work.</p>
       <pre class="lines">
 
 
-370
 371
 372
 373
@@ -1188,10 +1188,11 @@ waiting for work.</p>
 422
 423
 424
-425</pre>
+425
+426</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 370</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 371</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_autoscale'>autoscale</span>
   <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span>
@@ -1229,7 +1230,7 @@ waiting for work.</p>
         <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>=</span> <span class='id identifier rubyid_now'>now</span>
         <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='period'>.</span><span class='id identifier rubyid_fill'>fill</span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
       <span class='kw'>elsif</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>&gt;=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_WINDOW (constant)">AUTOSCALE_WINDOW</a></span></span>
-        <span class='kw'>if</span> <span class='id identifier rubyid_should_grow?'>should_grow?</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='rparen'>)</span>
+        <span class='kw'>if</span> <span class='id identifier rubyid_should_grow?'>should_grow?</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span><span class='rparen'>)</span>
           <span class='id identifier rubyid_growth_samples'>growth_samples</span> <span class='op'>+=</span> <span class='int'>1</span>
           <span class='kw'>if</span> <span class='id identifier rubyid_growth_samples'>growth_samples</span> <span class='op'>&gt;=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_GROWTH_SAMPLES-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_GROWTH_SAMPLES (constant)">AUTOSCALE_GROWTH_SAMPLES</a></span></span>
             <span class='id identifier rubyid_spawn_worker'>spawn_worker</span><span class='lparen'>(</span><span class='label'>temporary:</span> <span class='kw'>true</span><span class='rparen'>)</span>
@@ -1312,12 +1313,12 @@ parameters passed to the constructor.</p>
       <pre class="lines">
 
 
-179
 180
-181</pre>
+181
+182</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 179</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 180</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_length'>length</span>
   <span class='ivar'>@alive_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1384,12 +1385,12 @@ being submitted faster than it can be processed.</p>
       <pre class="lines">
 
 
-201
 202
-203</pre>
+203
+204</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 201</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 202</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_length'>queue_length</span>
   <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span>
@@ -1402,7 +1403,7 @@ being submitted faster than it can be processed.</p>
       <div class="method_details ">
   <h3 class="signature " id="should_grow?-instance_method">
   
-    #<strong>should_grow?</strong>(previous_snapshot, snapshot, phase_samples)  &#x21d2; <tt>true</tt>, <tt>false</tt> 
+    #<strong>should_grow?</strong>(previous_snapshot, snapshot, phase_samples, elapsed_time)  &#x21d2; <tt>true</tt>, <tt>false</tt> 
   
 
   
@@ -1412,8 +1413,10 @@ being submitted faster than it can be processed.</p>
   <div class="discussion">
     <p>Returns whether another worker is likely to improve throughput.</p>
 <p>Requiring workers to spend a majority of their time blocked outside the
-GVL recognizes blocking operations. The pool only grows when less than
-two percent of their time was spent waiting for the GVL.</p>
+GVL recognizes blocking operations. The pool only grows while its workers
+use less than half of one CPU, avoiding extra threads when Ruby
+execution is the bottleneck without mistaking OS scheduling delays for
+GVL contention.</p>
 
   </div>
 </div>
@@ -1463,6 +1466,20 @@ two percent of their time was spent waiting for the GVL.</p>
       
     </li>
   
+    <li>
+      
+        <span class='name'>elapsed_time</span>
+      
+      
+        <span class='type'>(<tt>Float</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>seconds covered by the snapshots</p></div>
+      
+    </li>
+  
 </ul>
 
 <p class="tag_title">Returns:</p>
@@ -1485,10 +1502,6 @@ two percent of their time was spent waiting for the GVL.</p>
       <pre class="lines">
 
 
-439
-440
-441
-442
 443
 444
 445
@@ -1506,21 +1519,25 @@ two percent of their time was spent waiting for the GVL.</p>
 457
 458
 459
-460</pre>
+460
+461
+462
+463
+464</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 439</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 443</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_should_grow?'>should_grow?</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_should_grow?'>should_grow?</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select!'>select!</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_workers'>workers</span> <span class='op'>=</span> <span class='ivar'>@threads</span>
   <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>if</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span> <span class='op'>&gt;=</span> <span class='ivar'>@max_size</span>
   <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>if</span> <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span>
 
-  <span class='id identifier rubyid__running_count'>_running_count</span><span class='comma'>,</span> <span class='id identifier rubyid__waiting_count'>_waiting_count</span><span class='comma'>,</span> <span class='id identifier rubyid__blocked_count'>_blocked_count</span><span class='comma'>,</span> <span class='id identifier rubyid_running_time'>running_time</span><span class='comma'>,</span> <span class='id identifier rubyid_waiting_time'>waiting_time</span><span class='comma'>,</span> <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span>
-  <span class='id identifier rubyid_running_time'>running_time</span> <span class='op'>-=</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>3</span><span class='rbracket'>]</span>
-  <span class='id identifier rubyid_waiting_time'>waiting_time</span> <span class='op'>-=</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>4</span><span class='rbracket'>]</span>
-  <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>-=</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>5</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_running_time'>running_time</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>3</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>3</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_waiting_time'>waiting_time</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>4</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>4</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>5</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>5</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span>
   <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>=</span> <span class='id identifier rubyid_running_time'>running_time</span> <span class='op'>+</span> <span class='id identifier rubyid_waiting_time'>waiting_time</span> <span class='op'>+</span> <span class='id identifier rubyid_blocked_time'>blocked_time</span>
 
   <span class='id identifier rubyid_minimum_measured_time'>minimum_measured_time</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#AUTOSCALE_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_WINDOW (constant)">AUTOSCALE_WINDOW</a></span></span> <span class='op'>*</span> <span class='int'>1_000_000_000</span> <span class='op'>*</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span> <span class='op'>/</span> <span class='int'>2</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
@@ -1530,8 +1547,8 @@ two percent of their time was spent waiting for the GVL.</p>
   <span class='kw'>end</span>
 
   <span class='id identifier rubyid_total_time'>total_time</span><span class='period'>.</span><span class='id identifier rubyid_positive?'>positive?</span> <span class='op'>&amp;&amp;</span>
-    <span class='id identifier rubyid_waiting_time'>waiting_time</span> <span class='op'>*</span> <span class='int'>50</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>&amp;&amp;</span>
-    <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;</span> <span class='id identifier rubyid_total_time'>total_time</span>
+    <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;</span> <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>&amp;&amp;</span>
+    <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&lt;</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>*</span> <span class='int'>1_000_000_000</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1598,7 +1615,6 @@ will raise an exception.</p>
       <pre class="lines">
 
 
-258
 259
 260
 261
@@ -1606,10 +1622,11 @@ will raise an exception.</p>
 263
 264
 265
-266</pre>
+266
+267</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 258</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 259</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_shutdown'>shutdown</span>
   <span class='kw'>return</span> <span class='kw'>if</span> <span class='ivar'>@shutdown</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
@@ -1696,7 +1713,6 @@ will raise an exception.</p>
       <pre class="lines">
 
 
-311
 312
 313
 314
@@ -1748,10 +1764,11 @@ will raise an exception.</p>
 360
 361
 362
-363</pre>
+363
+364</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 311</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 312</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span><span class='lparen'>(</span><span class='label'>temporary:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_thread_number'>thread_number</span> <span class='op'>=</span> <span class='ivar'>@next_thread_number</span>
@@ -1838,7 +1855,6 @@ for all threads to be fully started before returning.</p>
       <pre class="lines">
 
 
-279
 280
 281
 282
@@ -1851,10 +1867,11 @@ for all threads to be fully started before returning.</p>
 289
 290
 291
-292</pre>
+292
+293</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 279</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 280</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='ivar'>@size</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span> <span class='rbrace'>}</span>
@@ -1880,7 +1897,7 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Sat Aug 29 05:36:42 2026 by
+  Generated on Sun Aug 30 00:17:17 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
