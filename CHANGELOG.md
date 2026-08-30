@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.15.2] - 2026-08-30
+
 - Avoid thread event hook overhead for fixed thread pools
 
 ## [0.15.1] - 2026-08-30
