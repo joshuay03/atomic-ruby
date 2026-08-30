@@ -133,10 +133,6 @@ module AtomicRuby
 
     # Blocks the current thread until the count reaches zero.
     #
-    # This method will block the calling thread until other threads have
-    # called {#count_down} enough times to reduce the count to zero.
-    # The method uses busy-waiting (Thread.pass) to check the count.
-    #
     # @return [void]
     #
     # @example Simple wait
@@ -166,7 +162,7 @@ module AtomicRuby
     #
     # @rbs () -> void
     def wait
-      Thread.pass while @count.value > 0
+      sleep 0.001 while @count.value > 0
     end
   end
 end

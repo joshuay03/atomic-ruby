@@ -68,8 +68,26 @@ class TestAtomicCountDownLatch < Minitest::Test
         latch.count_down
       }
     end
-    latch.wait
+    assert_nil latch.wait
     assert_equal 0, latch.count
+  end
+
+  def test_wait_wakes_all_waiters
+    latch = AtomicCountDownLatch.new(1)
+    started_count = Atom.new(0)
+    waiters = 5.times.map do
+      Thread.new do
+        started_count.swap { |current_count| current_count + 1 }
+        latch.wait
+      end
+    end
+    Thread.pass until started_count.value == 5
+    sleep 0.01
+
+    assert waiters.all?(&:alive?)
+    latch.count_down
+
+    assert_equal [nil] * 5, waiters.map(&:value)
   end
 
   if AtomicRuby::RACTOR_SAFE
@@ -83,10 +101,10 @@ class TestAtomicCountDownLatch < Minitest::Test
       end
       wait_ractor = Ractor.new(latch) do |latch|
         latch.wait
-        latch.count
       end
       countdown_ractors.each(&:value)
-      assert_equal 0, wait_ractor.value
+      assert_nil wait_ractor.value
+      assert_equal 0, latch.count
     end
   end
 end

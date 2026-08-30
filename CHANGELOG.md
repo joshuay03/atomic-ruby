@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Replace `Thread.pass` busy-wait with `sleep` in `AtomicCountDownLatch#wait`
+
 ## [0.15.2] - 2026-08-30
 
 - Avoid thread event hook overhead for fixed thread pools
