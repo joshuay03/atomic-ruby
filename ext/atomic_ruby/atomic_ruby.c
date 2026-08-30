@@ -535,12 +535,14 @@ typedef struct {
   _Atomic unsigned long long running_time;
   _Atomic unsigned long long waiting_time;
   _Atomic unsigned long long blocked_time;
+  _Atomic unsigned long long running_cpu_time;
 } atomic_ruby_thread_pool_monitor_t;
 
 typedef struct {
   atomic_ruby_thread_pool_monitor_t *monitor;
   atomic_ruby_thread_pool_worker_phase_t phase;
   unsigned long long phase_started_at;
+  unsigned long long running_cpu_started_at;
 } atomic_ruby_thread_pool_worker_state_t;
 
 static rb_internal_thread_specific_key_t atomic_ruby_thread_pool_worker_key;
@@ -569,14 +571,27 @@ static unsigned long long atomic_ruby_monotonic_time(void) {
   return (unsigned long long)time.tv_sec * 1000000000ULL + (unsigned long long)time.tv_nsec;
 }
 
+static unsigned long long atomic_ruby_thread_cpu_time(void) {
+  struct timespec time;
+  if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time) == -1) return 0;
+
+  return (unsigned long long)time.tv_sec * 1000000000ULL + (unsigned long long)time.tv_nsec;
+}
+
 static void atomic_ruby_thread_pool_worker_leave_phase(atomic_ruby_thread_pool_worker_state_t *state, unsigned long long now) {
   unsigned long long elapsed = now != 0 && state->phase_started_at != 0 && now >= state->phase_started_at ? now - state->phase_started_at : 0;
 
   switch (state->phase) {
-    case ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING:
+    case ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING: {
+      unsigned long long cpu_now = atomic_ruby_thread_cpu_time();
+      unsigned long long cpu_elapsed = cpu_now != 0 && state->running_cpu_started_at != 0 && cpu_now >= state->running_cpu_started_at
+        ? cpu_now - state->running_cpu_started_at
+        : 0;
       atomic_fetch_sub_explicit(&state->monitor->running_count, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&state->monitor->running_time, elapsed, memory_order_relaxed);
+      atomic_fetch_add_explicit(&state->monitor->running_cpu_time, cpu_elapsed, memory_order_relaxed);
       break;
+    }
     case ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING:
       atomic_fetch_sub_explicit(&state->monitor->waiting_count, 1, memory_order_relaxed);
       atomic_fetch_add_explicit(&state->monitor->waiting_time, elapsed, memory_order_relaxed);
@@ -597,6 +612,7 @@ static void atomic_ruby_thread_pool_worker_enter_phase(atomic_ruby_thread_pool_w
   switch (phase) {
     case ATOMIC_RUBY_THREAD_POOL_WORKER_RUNNING:
       atomic_fetch_add_explicit(&state->monitor->running_count, 1, memory_order_relaxed);
+      state->running_cpu_started_at = atomic_ruby_thread_cpu_time();
       break;
     case ATOMIC_RUBY_THREAD_POOL_WORKER_WAITING:
       atomic_fetch_add_explicit(&state->monitor->waiting_count, 1, memory_order_relaxed);
@@ -638,6 +654,7 @@ static VALUE rb_cThreadPoolMonitor_allocate(VALUE klass) {
   atomic_init(&monitor->running_time, 0);
   atomic_init(&monitor->waiting_time, 0);
   atomic_init(&monitor->blocked_time, 0);
+  atomic_init(&monitor->running_cpu_time, 0);
   return obj;
 }
 
@@ -650,6 +667,7 @@ static VALUE rb_cThreadPoolMonitor_register_worker(VALUE self) {
   state->monitor = monitor;
   state->phase = ATOMIC_RUBY_THREAD_POOL_WORKER_INACTIVE;
   state->phase_started_at = 0;
+  state->running_cpu_started_at = 0;
   rb_internal_thread_specific_set(thread, atomic_ruby_thread_pool_worker_key, state);
   return Qnil;
 }
@@ -683,13 +701,14 @@ static VALUE rb_cThreadPoolMonitor_snapshot(VALUE self) {
   TypedData_Get_Struct(self, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
 
   return rb_ary_new_from_args(
-    6,
+    7,
     UINT2NUM(atomic_load_explicit(&monitor->running_count, memory_order_relaxed)),
     UINT2NUM(atomic_load_explicit(&monitor->waiting_count, memory_order_relaxed)),
     UINT2NUM(atomic_load_explicit(&monitor->blocked_count, memory_order_relaxed)),
     ULL2NUM(atomic_load_explicit(&monitor->running_time, memory_order_relaxed)),
     ULL2NUM(atomic_load_explicit(&monitor->waiting_time, memory_order_relaxed)),
-    ULL2NUM(atomic_load_explicit(&monitor->blocked_time, memory_order_relaxed))
+    ULL2NUM(atomic_load_explicit(&monitor->blocked_time, memory_order_relaxed)),
+    ULL2NUM(atomic_load_explicit(&monitor->running_cpu_time, memory_order_relaxed))
   );
 }
 

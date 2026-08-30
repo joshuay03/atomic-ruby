@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Prevent OS scheduling delays from stopping adaptive thread pool growth
+
 ## [0.15.0] - 2026-08-29
 
 - Add adaptive scaling to `AtomicThreadPool` with `max_size:`

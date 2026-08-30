@@ -69,7 +69,8 @@ module AtomicRuby
     #
     # When `max_size` is greater than `size`, the pool adds temporary workers
     # if work remains queued while its active workers spend most of their time
-    # blocked outside the GVL, but not when they are waiting for the GVL.
+    # blocked outside the GVL, but not when Ruby execution is using the
+    # available CPU.
     # Temporary workers leave after the queue remains empty, returning the pool
     # to its baseline size. Omitting `max_size` creates a fixed-size pool.
     #
@@ -403,7 +404,7 @@ module AtomicRuby
             pressure_started_at = now
             phase_samples.fill(0)
           elsif now - pressure_started_at >= AUTOSCALE_WINDOW
-            if should_grow?(previous_snapshot, snapshot, phase_samples)
+            if should_grow?(previous_snapshot, snapshot, phase_samples, now - pressure_started_at)
               growth_samples += 1
               if growth_samples >= AUTOSCALE_GROWTH_SAMPLES
                 spawn_worker(temporary: true)
@@ -427,25 +428,28 @@ module AtomicRuby
     # Returns whether another worker is likely to improve throughput.
     #
     # Requiring workers to spend a majority of their time blocked outside the
-    # GVL recognizes blocking operations. The pool only grows when less than
-    # two percent of their time was spent waiting for the GVL.
+    # GVL recognizes blocking operations. The pool only grows while its workers
+    # use less than half of one CPU, avoiding extra threads when Ruby
+    # execution is the bottleneck without mistaking OS scheduling delays for
+    # GVL contention.
     #
     # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
     # @param snapshot [Array<Integer>] current GVL state snapshot
     # @param phase_samples [Array<Integer>] sampled current GVL states
+    # @param elapsed_time [Float] seconds covered by the snapshots
     # @return [true, false]
     #
-    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
-    def should_grow?(previous_snapshot, snapshot, phase_samples)
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
+    def should_grow?(previous_snapshot, snapshot, phase_samples, elapsed_time)
       @threads.select!(&:alive?)
       workers = @threads
       return false if workers.length >= @max_size
       return false if @active_thread_count.value < workers.length
 
-      _running_count, _waiting_count, _blocked_count, running_time, waiting_time, blocked_time = snapshot
-      running_time -= previous_snapshot[3]
-      waiting_time -= previous_snapshot[4]
-      blocked_time -= previous_snapshot[5]
+      running_time = snapshot[3] - previous_snapshot[3]
+      waiting_time = snapshot[4] - previous_snapshot[4]
+      blocked_time = snapshot[5] - previous_snapshot[5]
+      running_cpu_time = snapshot[6] - previous_snapshot[6]
       total_time = running_time + waiting_time + blocked_time
 
       minimum_measured_time = (AUTOSCALE_WINDOW * 1_000_000_000 * workers.length / 2).to_i
@@ -455,8 +459,8 @@ module AtomicRuby
       end
 
       total_time.positive? &&
-        waiting_time * 50 < total_time &&
-        blocked_time * 2 > total_time
+        blocked_time * 2 > total_time &&
+        running_cpu_time * 2 < elapsed_time * 1_000_000_000
     end
   end
 end

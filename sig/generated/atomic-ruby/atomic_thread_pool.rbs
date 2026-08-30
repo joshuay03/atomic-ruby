@@ -66,7 +66,8 @@ module AtomicRuby
     #
     # When `max_size` is greater than `size`, the pool adds temporary workers
     # if work remains queued while its active workers spend most of their time
-    # blocked outside the GVL, but not when they are waiting for the GVL.
+    # blocked outside the GVL, but not when Ruby execution is using the
+    # available CPU.
     # Temporary workers leave after the queue remains empty, returning the pool
     # to its baseline size. Omitting `max_size` creates a fixed-size pool.
     #
@@ -257,16 +258,19 @@ module AtomicRuby
     # Returns whether another worker is likely to improve throughput.
     #
     # Requiring workers to spend a majority of their time blocked outside the
-    # GVL recognizes blocking operations. The pool only grows when less than
-    # two percent of their time was spent waiting for the GVL.
+    # GVL recognizes blocking operations. The pool only grows while its workers
+    # use less than half of one CPU, avoiding extra threads when Ruby
+    # execution is the bottleneck without mistaking OS scheduling delays for
+    # GVL contention.
     #
     # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
     # @param snapshot [Array<Integer>] current GVL state snapshot
     # @param phase_samples [Array<Integer>] sampled current GVL states
+    # @param elapsed_time [Float] seconds covered by the snapshots
     # @return [true, false]
     #
-    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
-    def should_grow?: (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples) -> bool
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
+    def should_grow?: (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
   end
 end
 

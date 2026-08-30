@@ -176,6 +176,17 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_scales_up_for_mostly_blocking_work
+    pool = AtomicThreadPool.new(size: 1, max_size: 2)
+    pool.instance_variable_set(:@active_thread_count, Atom.new(1))
+    previous_snapshot = [0, 0, 0, 0, 0, 0, 0]
+    snapshot = [0, 0, 0, 10_000_000, 40_000_000, 60_000_000, 10_000_000]
+
+    assert pool.send(:should_grow?, previous_snapshot, snapshot, [0, 0, 0], 0.05)
+  ensure
+    pool&.shutdown
+  end
+
   def test_does_not_scale_up_for_cpu_bound_work
     release = AtomicBoolean.new(false)
     pool = AtomicThreadPool.new(size: 1, max_size: 3)
@@ -192,7 +203,7 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
-  def test_does_not_scale_up_for_cpu_bound_work_with_short_waits
+  def test_does_not_scale_up_for_mostly_cpu_bound_work
     release = AtomicBoolean.new(false)
     pool = AtomicThreadPool.new(size: 2, max_size: 4)
     4.times do
