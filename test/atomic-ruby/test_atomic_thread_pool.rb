@@ -111,6 +111,52 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_enqueue_succeeds_when_queueing_happens_before_shutdown
+    pool = AtomicThreadPool.new(size: 1)
+    queue = pool.instance_variable_get(:@queue)
+    enqueue_started = AtomicBoolean.new(false)
+    continue_enqueue = AtomicBoolean.new(false)
+    work_completed = AtomicBoolean.new(false)
+    queue.define_singleton_method(:push) do |work|
+      result = super(work)
+      enqueue_started.make_true
+      sleep 0.001 until continue_enqueue.true?
+      result
+    end
+
+    enqueue_thread = Thread.new { pool << proc { work_completed.make_true } }
+    wait_until { enqueue_started.true? }
+    pool.shutdown
+    continue_enqueue.make_true
+
+    assert_nil enqueue_thread.value
+    assert_predicate work_completed, :true?
+    assert_equal 0, pool.queue_length
+  end
+
+  def test_enqueue_raises_when_shutdown_happens_before_queueing
+    pool = AtomicThreadPool.new(size: 1)
+    queue = pool.instance_variable_get(:@queue)
+    enqueue_started = AtomicBoolean.new(false)
+    continue_enqueue = AtomicBoolean.new(false)
+    queue.define_singleton_method(:push) do |work|
+      enqueue_started.make_true
+      sleep 0.001 until continue_enqueue.true?
+      super(work)
+    end
+
+    enqueue_thread = Thread.new { pool << proc {} }
+    enqueue_thread.report_on_exception = false
+    wait_until { enqueue_started.true? }
+    pool.shutdown
+    continue_enqueue.make_true
+
+    assert_raises AtomicThreadPool::EnqueuedWorkAfterShutdownError do
+      enqueue_thread.value
+    end
+    assert_equal 0, pool.queue_length
+  end
+
   def test_enqueue_error_raising_work
     pool = AtomicThreadPool.new(size: 2)
     _out, err = capture_io do

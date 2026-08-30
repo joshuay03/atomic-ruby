@@ -201,6 +201,9 @@ module AtomicRuby
     # 2. Waits for all currently queued work to complete
     # 3. Waits for all worker threads to terminate
     #
+    # Enqueues accepted before shutdown are processed before the workers
+    # terminate.
+    #
     # After shutdown, all worker threads will be terminated and the pool
     # cannot be restarted. Attempting to enqueue work after shutdown
     # will raise an exception.

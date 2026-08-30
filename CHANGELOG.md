@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Prevent enqueues from racing `AtomicThreadPool#shutdown`
 - Remove interrupted waiters from `AtomicConditionVariable`
 - Replace `Thread.pass` busy-wait with `sleep` in `AtomicCountDownLatch#wait`
 

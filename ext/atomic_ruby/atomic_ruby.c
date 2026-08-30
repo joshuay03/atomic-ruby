@@ -172,6 +172,7 @@ typedef struct {
   volatile VALUE head;
   volatile VALUE tail;
   volatile rb_atomic_t count;
+  bool closed;
 } atomic_ruby_queue_t;
 
 static void atomic_ruby_queue_mark(void *ptr) {
@@ -211,6 +212,7 @@ static VALUE rb_cAtomicQueue_allocate(VALUE klass) {
   RB_OBJ_WRITE(obj, &atomic_ruby_queue->head, Qnil);
   RB_OBJ_WRITE(obj, &atomic_ruby_queue->tail, Qnil);
   atomic_ruby_queue->count = 0;
+  atomic_ruby_queue->closed = false;
   return obj;
 }
 
@@ -228,6 +230,7 @@ static VALUE rb_cAtomicQueue_initialize(VALUE self) {
 static VALUE rb_cAtomicQueue_push(VALUE self, VALUE value) {
   atomic_ruby_queue_t *atomic_ruby_queue;
   TypedData_Get_Struct(self, atomic_ruby_queue_t, &atomic_ruby_queue_type, atomic_ruby_queue);
+  if (atomic_ruby_queue->closed) return Qfalse;
 
   VALUE new_node = atomic_ruby_queue_node_new(value, Qnil);
 
@@ -257,6 +260,13 @@ static VALUE rb_cAtomicQueue_push(VALUE self, VALUE value) {
   RUBY_ATOMIC_INC(atomic_ruby_queue->count);
 
   return self;
+}
+
+static VALUE rb_cAtomicQueue_close(VALUE self) {
+  atomic_ruby_queue_t *atomic_ruby_queue;
+  TypedData_Get_Struct(self, atomic_ruby_queue_t, &atomic_ruby_queue_type, atomic_ruby_queue);
+  atomic_ruby_queue->closed = true;
+  return Qnil;
 }
 
 static VALUE rb_cAtomicQueue_pop(VALUE self) {
@@ -787,6 +797,7 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_alloc_func(rb_cAtomicQueue, rb_cAtomicQueue_allocate);
   rb_define_private_method(rb_cAtomicQueue, "_initialize", rb_cAtomicQueue_initialize, 0);
   rb_define_private_method(rb_cAtomicQueue, "_push", rb_cAtomicQueue_push, 1);
+  rb_define_private_method(rb_cAtomicQueue, "_close", rb_cAtomicQueue_close, 0);
   rb_define_private_method(rb_cAtomicQueue, "_pop", rb_cAtomicQueue_pop, 0);
   rb_define_private_method(rb_cAtomicQueue, "_size", rb_cAtomicQueue_size, 0);
   rb_define_private_method(rb_cAtomicQueue, "_empty_p", rb_cAtomicQueue_empty_p, 0);

@@ -155,12 +155,13 @@ module AtomicRuby
     #
     # @rbs (Proc work) -> void
     def <<(work)
-      raise EnqueuedWorkAfterShutdownError if @shutdown.true?
+      Thread.handle_interrupt(Exception => :never) do
+        @trim_requested&.make_false
+        raise EnqueuedWorkAfterShutdownError unless @queue.push(work)
 
-      @trim_requested&.make_false
-      @queue.push(work)
-      @work_available.signal
-      @autoscale_available&.signal
+        @work_available.signal
+        @autoscale_available&.signal
+      end
     end
 
     # Returns the number of currently alive worker threads.
@@ -242,6 +243,9 @@ module AtomicRuby
     # 2. Waits for all currently queued work to complete
     # 3. Waits for all worker threads to terminate
     #
+    # Enqueues accepted before shutdown are processed before the workers
+    # terminate.
+    #
     # After shutdown, all worker threads will be terminated and the pool
     # cannot be restarted. Attempting to enqueue work after shutdown
     # will raise an exception.
@@ -258,11 +262,12 @@ module AtomicRuby
     #
     # @rbs () -> void
     def shutdown
-      return if @shutdown.true?
-
-      @shutdown.make_true
-      @autoscale_available&.broadcast
-      @work_available.broadcast
+      Thread.handle_interrupt(Exception => :never) do
+        @queue.send(:_close)
+        @shutdown.make_true
+        @autoscale_available&.broadcast
+        @work_available.broadcast
+      end
       @autoscaler&.join
       @threads.each(&:join)
       @thread_pool_monitor&.stop
