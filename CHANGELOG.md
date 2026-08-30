@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Avoid thread event hook overhead for fixed thread pools
+
 ## [0.15.1] - 2026-08-30
 
 - Prevent OS scheduling delays from stopping adaptive thread pool growth

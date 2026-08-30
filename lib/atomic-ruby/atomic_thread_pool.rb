@@ -125,6 +125,7 @@ module AtomicRuby
         @autoscale_available = AtomicConditionVariable.new
         @trim_requested = AtomicBoolean.new(false)
         @thread_pool_monitor = ThreadPoolMonitor.new
+        @thread_pool_monitor.start
       end
 
       start
@@ -264,6 +265,7 @@ module AtomicRuby
       @work_available.broadcast
       @autoscaler&.join
       @threads.each(&:join)
+      @thread_pool_monitor&.stop
     end
 
     private

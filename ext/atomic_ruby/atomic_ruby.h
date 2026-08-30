@@ -4,6 +4,7 @@
 #include "ruby.h"
 #include "ruby/atomic.h"
 #include "ruby/thread.h"
+#include "ruby/thread_native.h"
 #include "ruby/version.h"
 
 #include <stdatomic.h>

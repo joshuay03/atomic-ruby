@@ -536,6 +536,7 @@ typedef struct {
   _Atomic unsigned long long waiting_time;
   _Atomic unsigned long long blocked_time;
   _Atomic unsigned long long running_cpu_time;
+  bool active;
 } atomic_ruby_thread_pool_monitor_t;
 
 typedef struct {
@@ -546,8 +547,27 @@ typedef struct {
 } atomic_ruby_thread_pool_worker_state_t;
 
 static rb_internal_thread_specific_key_t atomic_ruby_thread_pool_worker_key;
+static rb_nativethread_lock_t atomic_ruby_thread_pool_monitor_lock;
+static unsigned int atomic_ruby_thread_pool_monitor_count;
+static rb_internal_thread_event_hook_t *atomic_ruby_thread_pool_event_hook;
+
+static void atomic_ruby_thread_pool_event_callback(rb_event_flag_t event, const rb_internal_thread_event_data_t *event_data, void *user_data);
+
+static void atomic_ruby_thread_pool_monitor_stop(atomic_ruby_thread_pool_monitor_t *monitor) {
+  rb_nativethread_lock_lock(&atomic_ruby_thread_pool_monitor_lock);
+  if (monitor->active) {
+    monitor->active = false;
+    atomic_ruby_thread_pool_monitor_count--;
+    if (atomic_ruby_thread_pool_monitor_count == 0) {
+      rb_internal_thread_remove_event_hook(atomic_ruby_thread_pool_event_hook);
+      atomic_ruby_thread_pool_event_hook = NULL;
+    }
+  }
+  rb_nativethread_lock_unlock(&atomic_ruby_thread_pool_monitor_lock);
+}
 
 static void atomic_ruby_thread_pool_monitor_free(void *ptr) {
+  atomic_ruby_thread_pool_monitor_stop(ptr);
   xfree(ptr);
 }
 
@@ -655,7 +675,35 @@ static VALUE rb_cThreadPoolMonitor_allocate(VALUE klass) {
   atomic_init(&monitor->waiting_time, 0);
   atomic_init(&monitor->blocked_time, 0);
   atomic_init(&monitor->running_cpu_time, 0);
+  monitor->active = false;
   return obj;
+}
+
+static VALUE rb_cThreadPoolMonitor_start(VALUE self) {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  TypedData_Get_Struct(self, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
+  rb_nativethread_lock_lock(&atomic_ruby_thread_pool_monitor_lock);
+  if (!monitor->active) {
+    monitor->active = true;
+    if (atomic_ruby_thread_pool_monitor_count++ == 0) {
+      atomic_ruby_thread_pool_event_hook = rb_internal_thread_add_event_hook(
+        atomic_ruby_thread_pool_event_callback,
+        RUBY_INTERNAL_THREAD_EVENT_READY |
+          RUBY_INTERNAL_THREAD_EVENT_RESUMED |
+          RUBY_INTERNAL_THREAD_EVENT_SUSPENDED,
+        NULL
+      );
+    }
+  }
+  rb_nativethread_lock_unlock(&atomic_ruby_thread_pool_monitor_lock);
+  return Qnil;
+}
+
+static VALUE rb_cThreadPoolMonitor_stop(VALUE self) {
+  atomic_ruby_thread_pool_monitor_t *monitor;
+  TypedData_Get_Struct(self, atomic_ruby_thread_pool_monitor_t, &atomic_ruby_thread_pool_monitor_type, monitor);
+  atomic_ruby_thread_pool_monitor_stop(monitor);
+  return Qnil;
 }
 
 static VALUE rb_cThreadPoolMonitor_register_worker(VALUE self) {
@@ -756,15 +804,13 @@ RUBY_FUNC_EXPORTED void Init_atomic_ruby(void) {
   rb_define_private_method(rb_cAtomicConditionVariable, "_waiter_count", rb_cAtomicConditionVariable_waiter_count, 0);
 
   atomic_ruby_thread_pool_worker_key = rb_internal_thread_specific_key_create();
-  rb_internal_thread_add_event_hook(
-    atomic_ruby_thread_pool_event_callback,
-    RUBY_INTERNAL_THREAD_EVENT_READY |
-      RUBY_INTERNAL_THREAD_EVENT_RESUMED |
-      RUBY_INTERNAL_THREAD_EVENT_SUSPENDED,
-    NULL
-  );
+  rb_nativethread_lock_initialize(&atomic_ruby_thread_pool_monitor_lock);
+  atomic_ruby_thread_pool_monitor_count = 0;
+  atomic_ruby_thread_pool_event_hook = NULL;
   VALUE rb_cThreadPoolMonitor = rb_define_class_under(rb_mAtomicRuby, "ThreadPoolMonitor", rb_cObject);
   rb_define_alloc_func(rb_cThreadPoolMonitor, rb_cThreadPoolMonitor_allocate);
+  rb_define_method(rb_cThreadPoolMonitor, "start", rb_cThreadPoolMonitor_start, 0);
+  rb_define_method(rb_cThreadPoolMonitor, "stop", rb_cThreadPoolMonitor_stop, 0);
   rb_define_method(rb_cThreadPoolMonitor, "register_worker", rb_cThreadPoolMonitor_register_worker, 0);
   rb_define_method(rb_cThreadPoolMonitor, "unregister_worker", rb_cThreadPoolMonitor_unregister_worker, 0);
   rb_define_method(rb_cThreadPoolMonitor, "start_work", rb_cThreadPoolMonitor_start_work, 0);
