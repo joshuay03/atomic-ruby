@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.15.2] - 2026-08-31
+
 - Prevent enqueues from racing `AtomicThreadPool#shutdown`
 - Remove interrupted waiters from `AtomicConditionVariable`
 - Replace `Thread.pass` busy-wait with `sleep` in `AtomicCountDownLatch#wait`
