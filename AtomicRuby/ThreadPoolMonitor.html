@@ -296,22 +296,22 @@
       <pre class="lines">
 
 
-709
-710
-711
-712
-713
-714
-715
-716
-717
-718
 719
 720
-721</pre>
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 709</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 719</span>
 
 static VALUE rb_cThreadPoolMonitor_register_worker(VALUE self) {
   atomic_ruby_thread_pool_monitor_t *monitor;
@@ -346,24 +346,24 @@ static VALUE rb_cThreadPoolMonitor_register_worker(VALUE self) {
       <pre class="lines">
 
 
-747
-748
-749
-750
-751
-752
-753
-754
-755
-756
 757
 758
 759
 760
-761</pre>
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 747</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 757</span>
 
 static VALUE rb_cThreadPoolMonitor_snapshot(VALUE self) {
   atomic_ruby_thread_pool_monitor_t *monitor;
@@ -400,16 +400,6 @@ static VALUE rb_cThreadPoolMonitor_snapshot(VALUE self) {
       <pre class="lines">
 
 
-682
-683
-684
-685
-686
-687
-688
-689
-690
-691
 692
 693
 694
@@ -418,10 +408,20 @@ static VALUE rb_cThreadPoolMonitor_snapshot(VALUE self) {
 697
 698
 699
-700</pre>
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 682</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 692</span>
 
 static VALUE rb_cThreadPoolMonitor_start(VALUE self) {
   atomic_ruby_thread_pool_monitor_t *monitor;
@@ -462,14 +462,14 @@ static VALUE rb_cThreadPoolMonitor_start(VALUE self) {
       <pre class="lines">
 
 
-734
-735
-736
-737
-738</pre>
+744
+745
+746
+747
+748</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 734</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 744</span>
 
 <span class='id identifier rubyid_static'>static</span> <span class='const'>VALUE</span> <span class='id identifier rubyid_rb_cThreadPoolMonitor_start_work'>rb_cThreadPoolMonitor_start_work</span><span class='lparen'>(</span><span class='const'>VALUE</span> <span class='kw'>self</span><span class='rparen'>)</span> <span class='lbrace'>{</span>
   <span class='id identifier rubyid_atomic_ruby_thread_pool_worker_state_t'>atomic_ruby_thread_pool_worker_state_t</span> <span class='op'>*</span><span class='id identifier rubyid_state'>state</span> <span class='op'>=</span> <span class='id identifier rubyid_rb_internal_thread_specific_get'>rb_internal_thread_specific_get</span><span class='lparen'>(</span><span class='id identifier rubyid_rb_thread_current'>rb_thread_current</span><span class='lparen'>(</span><span class='rparen'>)</span><span class='comma'>,</span> <span class='id identifier rubyid_atomic_ruby_thread_pool_worker_key'>atomic_ruby_thread_pool_worker_key</span><span class='rparen'>)</span><span class='semicolon'>;</span>
@@ -496,15 +496,15 @@ static VALUE rb_cThreadPoolMonitor_start(VALUE self) {
       <pre class="lines">
 
 
-702
-703
-704
-705
-706
-707</pre>
+712
+713
+714
+715
+716
+717</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 702</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 712</span>
 
 static VALUE rb_cThreadPoolMonitor_stop(VALUE self) {
   atomic_ruby_thread_pool_monitor_t *monitor;
@@ -532,15 +532,15 @@ static VALUE rb_cThreadPoolMonitor_stop(VALUE self) {
       <pre class="lines">
 
 
-740
-741
-742
-743
-744
-745</pre>
+750
+751
+752
+753
+754
+755</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 740</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 750</span>
 
 static VALUE rb_cThreadPoolMonitor_stop_work(VALUE self) {
   atomic_ruby_thread_pool_worker_state_t *state = rb_internal_thread_specific_get(rb_thread_current(), atomic_ruby_thread_pool_worker_key);
@@ -568,19 +568,19 @@ static VALUE rb_cThreadPoolMonitor_stop_work(VALUE self) {
       <pre class="lines">
 
 
-723
-724
-725
-726
-727
-728
-729
-730
-731
-732</pre>
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 723</span>
+      <pre class="code"><span class="info file"># File 'ext/atomic_ruby/atomic_ruby.c', line 733</span>
 
 static VALUE rb_cThreadPoolMonitor_unregister_worker(VALUE self) {
   VALUE thread = rb_thread_current();
@@ -602,7 +602,7 @@ static VALUE rb_cThreadPoolMonitor_unregister_worker(VALUE self) {
 </div>
 
       <div id="footer">
-  Generated on Sun Aug 30 08:23:28 2026 by
+  Generated on Mon Aug 31 00:32:13 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>

@@ -588,9 +588,6 @@ race conditions.</p>
 </h3><div class="docstring">
   <div class="discussion">
     <p class="note returns_void">This method returns an undefined value.</p><p>Blocks the current thread until the count reaches zero.</p>
-<p>This method will block the calling thread until other threads have
-called <span class='object_link'><a href="#count_down-instance_method" title="AtomicRuby::AtomicCountDownLatch#count_down (method)">#count_down</a></span> enough times to reduce the count to zero.
-The method uses busy-waiting (Thread.pass) to check the count.</p>
 
   </div>
 </div>
@@ -637,15 +634,15 @@ The method uses busy-waiting (Thread.pass) to check the count.</p>
       <pre class="lines">
 
 
-168
-169
-170</pre>
+164
+165
+166</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_count_down_latch.rb', line 168</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_count_down_latch.rb', line 164</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_wait'>wait</span>
-  <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_pass'>pass</span> <span class='kw'>while</span> <span class='ivar'>@count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span> <span class='op'>&gt;</span> <span class='int'>0</span>
+  <span class='id identifier rubyid_sleep'>sleep</span> <span class='float'>0.001</span> <span class='kw'>while</span> <span class='ivar'>@count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span> <span class='op'>&gt;</span> <span class='int'>0</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -657,7 +654,7 @@ The method uses busy-waiting (Thread.pass) to check the count.</p>
 </div>
 
       <div id="footer">
-  Generated on Sun Aug 30 08:23:28 2026 by
+  Generated on Mon Aug 31 00:32:13 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>

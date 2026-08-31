@@ -116,18 +116,9 @@ which cannot be shared across ractors.</p></div>
 <p>Provides lock-free wait/signal coordination using atomic operations.</p>
 <p>AtomicConditionVariable lets one or more threads park until another
 thread signals them, without the paired <code>Mutex</code> that Ruby's
-<code>ConditionVariable</code> requires. The set of parked threads is tracked
-in a native doubly-linked list, so registering a waiter, removing a
-waiter, and shifting the head off for a signal are all O(1) and
-allocation-light. Parking still uses <code>Thread.stop</code> and
-<code>Thread#wakeup</code>, which are the standard kernel-level primitives Ruby
-exposes for sleeping a thread.</p>
-<p>The lost-wakeup race in a naive <code>check-then-park</code> consumer is avoided
-by the <span class='object_link'><a href="#wait-instance_method" title="AtomicRuby::AtomicConditionVariable#wait (method)">#wait</a></span> contract: a waiter registers itself before re-evaluating
-the predicate, so any signal that fires after the producer makes the
-predicate true is guaranteed to see the waiter and wake it. Ruby also
-remembers pending wakeups across <code>Thread.stop</code>, so a wakeup that
-arrives between the predicate check and the actual park is not lost.</p>
+<code>ConditionVariable</code> requires.</p>
+<p>Waiters supply a predicate that is checked again after registration,
+preventing signals sent after a relevant state change from being lost.</p>
 
   </div>
 </div>
@@ -337,12 +328,12 @@ arrives between the predicate check and the actual park is not lost.</p>
       <pre class="lines">
 
 
-52
-53
-54</pre>
+43
+44
+45</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 52</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 43</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span>
   <span class='id identifier rubyid__initialize'>_initialize</span>
@@ -371,7 +362,6 @@ arrives between the predicate check and the actual park is not lost.</p>
 </h3><div class="docstring">
   <div class="discussion">
     <p>Wakes every parked waiter.</p>
-<p>Each woken thread observes the wake the same way as with <span class='object_link'><a href="#signal-instance_method" title="AtomicRuby::AtomicConditionVariable#signal (method)">#signal</a></span>.</p>
 
   </div>
 </div>
@@ -409,14 +399,14 @@ arrives between the predicate check and the actual park is not lost.</p>
       <pre class="lines">
 
 
-105
-106
-107
-108
-109</pre>
+90
+91
+92
+93
+94</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 105</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 90</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_broadcast'>broadcast</span>
   <span class='id identifier rubyid_threads'>threads</span> <span class='op'>=</span> <span class='id identifier rubyid__drain_threads'>_drain_threads</span>
@@ -440,9 +430,6 @@ arrives between the predicate check and the actual park is not lost.</p>
 </h3><div class="docstring">
   <div class="discussion">
     <p>Wakes one parked waiter, or no-ops if none are parked.</p>
-<p>If a waiter has registered itself but is not yet inside <code>Thread.stop</code>,
-Ruby remembers the wakeup and the next <code>Thread.stop</code> returns
-immediately.</p>
 
   </div>
 </div>
@@ -480,16 +467,16 @@ immediately.</p>
       <pre class="lines">
 
 
-86
-87
-88
-89
-90
-91
-92</pre>
+73
+74
+75
+76
+77
+78
+79</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 86</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 73</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_signal'>signal</span>
   <span class='id identifier rubyid_thread'>thread</span> <span class='op'>=</span> <span class='id identifier rubyid__shift_thread'>_shift_thread</span>
@@ -516,12 +503,10 @@ immediately.</p>
   <div class="discussion">
     <p>Blocks until the given block returns a truthy value, then returns that
 value.</p>
-<p>The block is evaluated optimistically first. If it returns truthy on
-that pass, no waiter is registered and the call returns immediately.
-Otherwise the calling thread registers itself, re-evaluates the
-block, and parks via <code>Thread.stop</code> until a <span class='object_link'><a href="#signal-instance_method" title="AtomicRuby::AtomicConditionVariable#signal (method)">#signal</a></span> or <span class='object_link'><a href="#broadcast-instance_method" title="AtomicRuby::AtomicConditionVariable#broadcast (method)">#broadcast</a></span>
-wakes it. The block may run more than once and may run concurrently
-with a signalling thread.</p>
+<p>The block may run more than once and may run concurrently with a
+signalling thread. Rechecking it after registration prevents lost
+wakeups. Interrupted waits are unregistered before the exception is
+propagated.</p>
 
   </div>
 </div>
@@ -598,26 +583,30 @@ with a signalling thread.</p>
       <pre class="lines">
 
 
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
 137
 138
 139
-140
-141
-142
-143
-144
-145
-146
-147
-148
-149
-150
-151
-152
-153</pre>
+140</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 137</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 120</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_wait'>wait</span>
   <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='kw'>yield</span>
@@ -625,15 +614,19 @@ with a signalling thread.</p>
 
   <span class='id identifier rubyid_self_thread'>self_thread</span> <span class='op'>=</span> <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_current'>current</span>
   <span class='id identifier rubyid_loop'>loop</span> <span class='kw'>do</span>
-    <span class='id identifier rubyid_waiter'>waiter</span> <span class='op'>=</span> <span class='id identifier rubyid__add_waiter'>_add_waiter</span><span class='lparen'>(</span><span class='id identifier rubyid_self_thread'>self_thread</span><span class='rparen'>)</span>
-    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='kw'>yield</span>
-    <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span>
-      <span class='id identifier rubyid__remove_waiter'>_remove_waiter</span><span class='lparen'>(</span><span class='id identifier rubyid_waiter'>waiter</span><span class='rparen'>)</span>
-      <span class='kw'>return</span> <span class='id identifier rubyid_result'>result</span>
-    <span class='kw'>end</span>
+    <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
+      <span class='id identifier rubyid_waiter'>waiter</span> <span class='op'>=</span> <span class='id identifier rubyid__add_waiter'>_add_waiter</span><span class='lparen'>(</span><span class='id identifier rubyid_self_thread'>self_thread</span><span class='rparen'>)</span>
+      <span class='kw'>begin</span>
+        <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:immediate</span><span class='rparen'>)</span> <span class='kw'>do</span>
+          <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='kw'>yield</span>
+          <span class='kw'>return</span> <span class='id identifier rubyid_result'>result</span> <span class='kw'>if</span> <span class='id identifier rubyid_result'>result</span>
 
-    <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_stop'>stop</span>
-    <span class='id identifier rubyid__remove_waiter'>_remove_waiter</span><span class='lparen'>(</span><span class='id identifier rubyid_waiter'>waiter</span><span class='rparen'>)</span>
+          <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_stop'>stop</span>
+        <span class='kw'>end</span>
+      <span class='kw'>ensure</span>
+        <span class='id identifier rubyid__remove_waiter'>_remove_waiter</span><span class='lparen'>(</span><span class='id identifier rubyid_waiter'>waiter</span><span class='rparen'>)</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
   <span class='kw'>end</span>
 <span class='kw'>end</span></pre>
     </td>
@@ -693,12 +686,12 @@ in concurrent environments.</p>
       <pre class="lines">
 
 
-69
-70
-71</pre>
+60
+61
+62</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 69</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_condition_variable.rb', line 60</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_waiter_count'>waiter_count</span>
   <span class='id identifier rubyid__waiter_count'>_waiter_count</span>
@@ -713,7 +706,7 @@ in concurrent environments.</p>
 </div>
 
       <div id="footer">
-  Generated on Sun Aug 30 08:23:28 2026 by
+  Generated on Mon Aug 31 00:32:13 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
