@@ -588,6 +588,56 @@ Concurrent Ruby Thread Pool:    5.012798 seconds
 Atomic Ruby Atomic Thread Pool: 4.755237 seconds
 </code></pre>
 </details>
+<details>
+<summary>AtomicCountDownLatch</summary>
+<br>
+<pre class="code ruby"><code class="ruby"><span class='comment'># frozen_string_literal: true
+</span>
+<span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>benchmark</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_require'>require</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>concurrent-ruby</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_require_relative'>require_relative</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>../lib/atomic-ruby</span><span class='tstring_end'>&quot;</span></span>
+
+<span class='id identifier rubyid_results'>results</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+
+<span class='int'>2</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_idx'>idx</span><span class='op'>|</span>
+  <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Benchmark</span><span class='period'>.</span><span class='id identifier rubyid_measure'>measure</span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_latch'>latch</span> <span class='op'>=</span> <span class='kw'>case</span> <span class='id identifier rubyid_idx'>idx</span>
+    <span class='kw'>when</span> <span class='int'>0</span> <span class='kw'>then</span> <span class='const'>Concurrent</span><span class='op'>::</span><span class='const'>CountDownLatch</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='int'>1</span><span class='rparen'>)</span>
+    <span class='kw'>when</span> <span class='int'>1</span> <span class='kw'>then</span> <span class='const'><span class='object_link'><a href="top-level-namespace.html#AtomicCountDownLatch-constant" title="AtomicCountDownLatch (constant)">AtomicCountDownLatch</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='int'>1</span><span class='rparen'>)</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_thread'>thread</span> <span class='op'>=</span> <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span> <span class='kw'>do</span>
+      <span class='id identifier rubyid_sleep'>sleep</span><span class='lparen'>(</span><span class='int'>2</span><span class='rparen'>)</span>
+      <span class='id identifier rubyid_latch'>latch</span><span class='period'>.</span><span class='id identifier rubyid_count_down'>count_down</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_latch'>latch</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span>
+    <span class='id identifier rubyid_thread'>thread</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_results'>results</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_result'>result</span>
+<span class='kw'>end</span>
+
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>ruby version:            </span><span class='embexpr_beg'>#{</span><span class='const'>RUBY_DESCRIPTION</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>concurrent-ruby version: </span><span class='embexpr_beg'>#{</span><span class='const'>Concurrent</span><span class='op'>::</span><span class='const'>VERSION</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>atomic-ruby version:     </span><span class='embexpr_beg'>#{</span><span class='const'><span class='object_link'><a href="AtomicRuby.html" title="AtomicRuby (module)">AtomicRuby</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="AtomicRuby.html#VERSION-constant" title="AtomicRuby::VERSION (constant)">VERSION</a></span></span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Benchmark Results:</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Concurrent Ruby Count Down Latch:    </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_results'>results</span><span class='lbracket'>[</span><span class='int'>0</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>6</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_content'> CPU seconds, </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_results'>results</span><span class='lbracket'>[</span><span class='int'>0</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_real'>real</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>6</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_content'> elapsed seconds</span><span class='tstring_end'>&quot;</span></span>
+<span class='id identifier rubyid_puts'>puts</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Atomic Ruby Atomic Count Down Latch: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_results'>results</span><span class='lbracket'>[</span><span class='int'>1</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>6</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_content'> CPU seconds, </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_results'>results</span><span class='lbracket'>[</span><span class='int'>1</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_real'>real</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>6</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_content'> elapsed seconds</span><span class='tstring_end'>&quot;</span></span>
+</code></pre>
+<pre class="code ruby"><code class="ruby">&gt; bundle exec rake clobber &amp;&amp; bundle exec rake compile &amp;&amp; bundle exec ruby examples/atomic_count_down_latch_benchmark.rb
+
+ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
+concurrent-ruby version: 1.3.8
+atomic-ruby version:     0.15.3
+
+Benchmark Results:
+Concurrent Ruby Count Down Latch:    0.000511 CPU seconds, 2.001465 elapsed seconds
+Atomic Ruby Atomic Count Down Latch: 0.023529 CPU seconds, 2.00364 elapsed seconds
+</code></pre>
+</details>
 <h2 id="Development">Development</h2>
 <p>After checking out the repo, run <code>bin/setup</code> to install dependencies. Then, run <code>bundle exec rake</code> to run the tests.
 You can also run <code>bin/console</code> for an interactive prompt that will allow you to experiment.</p>
@@ -605,7 +655,7 @@ intended to be a safe, welcoming space for collaboration, and contributors are e
 follow the <a href="https://github.com/[joshuay03]/atomic-ruby/blob/main/CODE_OF_CONDUCT.md">code of conduct</a>.</p></div></div>
 
       <div id="footer">
-  Generated on Mon Aug 31 00:37:02 2026 by
+  Generated on Mon Aug 31 00:43:50 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
