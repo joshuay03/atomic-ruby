@@ -7,7 +7,4 @@ require "minitest/autorun"
 
 Warning[:experimental] = false
 
-if ENV["CI"]
-  puts "\nEnabling GC stress mode...\n\n"
-  GC.stress = true
-end
+GC.stress = true if ENV["RUBY_GC_STRESS"]

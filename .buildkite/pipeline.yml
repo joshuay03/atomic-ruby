@@ -1,26 +1,230 @@
 steps:
-  - label: ":ruby: Ruby 3.3"
-    image: "ruby:3.3"
-    commands:
-      - bundle install
-      - bundle exec rake
+  - group: ":linux: Linux"
+    key: linux
+    steps:
+      - label: ":ruby: Ruby 3.3"
+        image: "ruby:3.3"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
 
-  - label: ":ruby: Ruby 3.4"
-    image: "ruby:3.4"
-    commands:
-      - bundle install
-      - bundle exec rake
+      - label: ":ruby: Ruby 3.4"
+        image: "ruby:3.4"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
 
-  - label: ":ruby: Ruby 4.0"
-    image: "ruby:4.0"
-    commands:
-      - bundle install
-      - bundle exec rake
+      - label: ":ruby: Ruby 4.0"
+        image: "ruby:4.0"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
 
-  - label: ":ruby: Ruby head"
-    soft_fail: true
-    image: "rubylang/ruby:master-dev"
-    commands:
-      - apt-get update && apt-get install -y libyaml-dev
-      - bundle install
-      - bundle exec rake
+      - label: ":ruby: Ruby 4.0 +YJIT"
+        image: "ruby:4.0"
+        env:
+          RUBY_YJIT_ENABLE: "1"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0 +GC.stress"
+        image: "ruby:4.0"
+        env:
+          RUBY_GC_STRESS: "1"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0 +YJIT +GC.stress"
+        image: "ruby:4.0"
+        env:
+          RUBY_YJIT_ENABLE: "1"
+          RUBY_GC_STRESS: "1"
+        commands:
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head"
+        soft_fail: true
+        image: "rubylang/ruby:master-dev"
+        commands:
+          - apt-get update && apt-get install -y libyaml-dev
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +YJIT"
+        soft_fail: true
+        image: "rubylang/ruby:master-dev"
+        env:
+          RUBY_YJIT_ENABLE: "1"
+        commands:
+          - apt-get update && apt-get install -y libyaml-dev
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +GC.stress"
+        soft_fail: true
+        image: "rubylang/ruby:master-dev"
+        env:
+          RUBY_GC_STRESS: "1"
+        commands:
+          - apt-get update && apt-get install -y libyaml-dev
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +YJIT +GC.stress"
+        soft_fail: true
+        image: "rubylang/ruby:master-dev"
+        env:
+          RUBY_YJIT_ENABLE: "1"
+          RUBY_GC_STRESS: "1"
+        commands:
+          - apt-get update && apt-get install -y libyaml-dev
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+  - group: ":mac: macOS"
+    key: macos
+    steps:
+      - label: ":ruby: Ruby 3.3"
+        agents:
+          queue: macos
+        commands:
+          - brew install --quiet ruby@3.3
+          - export PATH="$(brew --prefix ruby@3.3)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 3.4"
+        agents:
+          queue: macos
+        commands:
+          - brew install --quiet ruby@3.4
+          - export PATH="$(brew --prefix ruby@3.4)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0"
+        agents:
+          queue: macos
+        commands:
+          - brew install --quiet ruby@4.0
+          - export PATH="$(brew --prefix ruby@4.0)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0 +YJIT"
+        agents:
+          queue: macos
+        env:
+          RUBY_YJIT_ENABLE: "1"
+        commands:
+          - brew install --quiet ruby@4.0
+          - export PATH="$(brew --prefix ruby@4.0)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0 +GC.stress"
+        agents:
+          queue: macos
+        env:
+          RUBY_GC_STRESS: "1"
+        commands:
+          - brew install --quiet ruby@4.0
+          - export PATH="$(brew --prefix ruby@4.0)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby 4.0 +YJIT +GC.stress"
+        agents:
+          queue: macos
+        env:
+          RUBY_YJIT_ENABLE: "1"
+          RUBY_GC_STRESS: "1"
+        commands:
+          - brew install --quiet ruby@4.0
+          - export PATH="$(brew --prefix ruby@4.0)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head"
+        soft_fail: true
+        agents:
+          queue: macos
+        commands:
+          - brew unlink ruby
+          - brew install --HEAD --quiet ruby
+          - export PATH="$(brew --prefix ruby)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +YJIT"
+        soft_fail: true
+        agents:
+          queue: macos
+        env:
+          RUBY_YJIT_ENABLE: "1"
+        commands:
+          - brew unlink ruby
+          - brew install --HEAD --quiet ruby
+          - export PATH="$(brew --prefix ruby)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +GC.stress"
+        soft_fail: true
+        agents:
+          queue: macos
+        env:
+          RUBY_GC_STRESS: "1"
+        commands:
+          - brew unlink ruby
+          - brew install --HEAD --quiet ruby
+          - export PATH="$(brew --prefix ruby)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
+
+      - label: ":ruby: Ruby head +YJIT +GC.stress"
+        soft_fail: true
+        agents:
+          queue: macos
+        env:
+          RUBY_YJIT_ENABLE: "1"
+          RUBY_GC_STRESS: "1"
+        commands:
+          - brew unlink ruby
+          - brew install --HEAD --quiet ruby
+          - export PATH="$(brew --prefix ruby)/bin:$PATH"
+          - bundle config set --local path .bundle
+          - ruby -v
+          - bundle install
+          - bundle exec rake
