@@ -574,7 +574,7 @@ Atomic Ruby Atomic Queue Push/Pop:     1492.8 i/s - 1.22x  slower
   <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='const'>Benchmark</span><span class='period'>.</span><span class='id identifier rubyid_measure'>measure</span> <span class='kw'>do</span>
     <span class='id identifier rubyid_pool'>pool</span> <span class='op'>=</span> <span class='kw'>case</span> <span class='id identifier rubyid_idx'>idx</span>
     <span class='kw'>when</span> <span class='int'>0</span> <span class='kw'>then</span> <span class='const'>Concurrent</span><span class='period'>.</span><span class='id identifier rubyid_new_io_executor'>new_io_executor</span>
-    <span class='kw'>when</span> <span class='int'>1</span> <span class='kw'>then</span> <span class='const'><span class='object_link'><a href="top-level-namespace.html#AtomicThreadPool-constant" title="AtomicThreadPool (constant)">AtomicThreadPool</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>size:</span> <span class='int'>20</span><span class='comma'>,</span> <span class='label'>max_size:</span> <span class='const'>Float</span><span class='op'>::</span><span class='const'>INFINITY</span><span class='rparen'>)</span>
+    <span class='kw'>when</span> <span class='int'>1</span> <span class='kw'>then</span> <span class='const'><span class='object_link'><a href="top-level-namespace.html#AtomicThreadPool-constant" title="AtomicThreadPool (constant)">AtomicThreadPool</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>size:</span> <span class='int'>1</span><span class='comma'>,</span> <span class='label'>max_size:</span> <span class='const'>Float</span><span class='op'>::</span><span class='const'>INFINITY</span><span class='rparen'>)</span>
     <span class='kw'>end</span>
     <span class='id identifier rubyid_latch'>latch</span> <span class='op'>=</span> <span class='kw'>case</span> <span class='id identifier rubyid_idx'>idx</span>
     <span class='kw'>when</span> <span class='int'>0</span> <span class='kw'>then</span> <span class='const'>Concurrent</span><span class='op'>::</span><span class='const'>CountDownLatch</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='int'>100</span><span class='rparen'>)</span>
@@ -617,12 +617,12 @@ concurrent-ruby version: 1.3.8
 atomic-ruby version:     0.15.4
 
 Fixed Pool Results:
-Concurrent Ruby Fixed Thread Pool: 5.000126 seconds
-Atomic Ruby Fixed Thread Pool:     4.767922 seconds
+Concurrent Ruby Fixed Thread Pool: 5.071384 seconds
+Atomic Ruby Fixed Thread Pool:     4.707248 seconds
 
 Adaptive Pool Results:
-Concurrent Ruby IO Thread Pool:   0.222512 seconds
-Atomic Ruby Adaptive Thread Pool: 0.381807 seconds
+Concurrent Ruby IO Thread Pool:   0.222705 seconds
+Atomic Ruby Adaptive Thread Pool: 0.622629 seconds
 </code></pre>
 </details>
 <details>
@@ -692,7 +692,7 @@ intended to be a safe, welcoming space for collaboration, and contributors are e
 follow the <a href="https://github.com/[joshuay03]/atomic-ruby/blob/main/CODE_OF_CONDUCT.md">code of conduct</a>.</p></div></div>
 
       <div id="footer">
-  Generated on Tue Sep  1 08:44:18 2026 by
+  Generated on Tue Sep  1 08:48:56 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
