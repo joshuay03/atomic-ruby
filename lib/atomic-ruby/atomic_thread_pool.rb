@@ -51,7 +51,7 @@ module AtomicRuby
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
-    AUTOSCALE_IDLE_TIME = 1
+    AUTOSCALE_IDLE_TIME = 5
     AUTOSCALE_INTERVAL = 0.01
     AUTOSCALE_WINDOW = 0.05
     private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INTERVAL, :AUTOSCALE_WINDOW
@@ -70,7 +70,7 @@ module AtomicRuby
     # if work remains queued while its active workers spend most of their time
     # blocked outside the GVL, but not when Ruby execution is using the
     # available CPU.
-    # Temporary workers leave after the queue remains empty, returning the pool
+    # Temporary workers remain available between bursts before the pool returns
     # to its baseline size. Omitting `max_size` creates a fixed-size pool.
     #
     # @param size [Integer] The baseline number of worker threads (must be positive)

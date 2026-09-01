@@ -296,7 +296,8 @@ class TestAtomicThreadPool < Minitest::Test
     begin
       wait_until { pool.size == 3 }
       release.make_true
-      wait_until { pool.size == 1 }
+      wait_until(timeout: 15) { pool.size == 1 }
+      assert_equal 1, pool.size
     ensure
       release.make_true
       pool.shutdown

@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- Keep temporary `AtomicThreadPool` workers alive for five seconds
 - Speed up `AtomicThreadPool` scaling for blocking work
 
 ## [0.15.2] - 2026-08-31
