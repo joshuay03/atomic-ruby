@@ -559,9 +559,8 @@ another.</p>
 if work remains queued while its active workers spend most of their time
 blocked outside the GVL, but not when Ruby execution is using the
 available CPU.
-Temporary workers leave after the queue remains empty for five seconds,
-avoiding churn between bursts while returning the pool to its baseline
-size. Omitting <code>max_size</code> creates a fixed-size pool.</p>
+Temporary workers remain available between bursts before the pool returns
+to its baseline size. Omitting <code>max_size</code> creates a fixed-size pool.</p>
 
   </div>
 </div>
@@ -772,6 +771,7 @@ to size or <code>Float::INFINITY</code></p></div>
       <pre class="lines">
 
 
+104
 105
 106
 107
@@ -798,11 +798,10 @@ to size or <code>Float::INFINITY</code></p></div>
 128
 129
 130
-131
-132</pre>
+131</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 105</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 104</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>size:</span><span class='comma'>,</span> <span class='label'>max_size:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>name:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>on_error:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_raise'>raise</span> <span class='const'>ArgumentError</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>size must be a positive Integer</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='id identifier rubyid_size'>size</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Integer</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_size'>size</span> <span class='op'>&gt;</span> <span class='int'>0</span>
@@ -928,6 +927,7 @@ Enqueueing is O(1) regardless of current queue depth.</p>
       <pre class="lines">
 
 
+156
 157
 158
 159
@@ -935,11 +935,10 @@ Enqueueing is O(1) regardless of current queue depth.</p>
 161
 162
 163
-164
-165</pre>
+164</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 157</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 156</span>
 
 <span class='kw'>def</span> <span class='op'>&lt;&lt;</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
   <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
@@ -1021,12 +1020,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
+234
 235
-236
-237</pre>
+236</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 235</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 234</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_active_count'>active_count</span>
   <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1073,12 +1072,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
+306
 307
-308
-309</pre>
+308</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 307</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 306</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_adaptive?'>adaptive?</span>
   <span class='ivar'>@max_size</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
@@ -1112,6 +1111,7 @@ waiting for work.</p>
       <pre class="lines">
 
 
+377
 378
 379
 380
@@ -1160,11 +1160,10 @@ waiting for work.</p>
 423
 424
 425
-426
-427</pre>
+426</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 378</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 377</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_autoscale'>autoscale</span>
   <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span>
@@ -1279,12 +1278,12 @@ parameters passed to the constructor.</p>
       <pre class="lines">
 
 
+181
 182
-183
-184</pre>
+183</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 182</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 181</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_length'>length</span>
   <span class='ivar'>@alive_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1351,12 +1350,12 @@ being submitted faster than it can be processed.</p>
       <pre class="lines">
 
 
+203
 204
-205
-206</pre>
+205</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 204</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 203</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_length'>queue_length</span>
   <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span>
@@ -1468,6 +1467,7 @@ GVL contention.</p>
       <pre class="lines">
 
 
+443
 444
 445
 446
@@ -1488,11 +1488,10 @@ GVL contention.</p>
 461
 462
 463
-464
-465</pre>
+464</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 444</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 443</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_should_grow?'>should_grow?</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select!'>select!</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span>
@@ -1583,6 +1582,7 @@ will raise an exception.</p>
       <pre class="lines">
 
 
+263
 264
 265
 266
@@ -1592,11 +1592,10 @@ will raise an exception.</p>
 270
 271
 272
-273
-274</pre>
+273</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 264</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 263</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_shutdown'>shutdown</span>
   <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
@@ -1685,6 +1684,7 @@ will raise an exception.</p>
       <pre class="lines">
 
 
+318
 319
 320
 321
@@ -1736,11 +1736,10 @@ will raise an exception.</p>
 367
 368
 369
-370
-371</pre>
+370</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 319</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 318</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span><span class='lparen'>(</span><span class='label'>temporary:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_thread_number'>thread_number</span> <span class='op'>=</span> <span class='ivar'>@next_thread_number</span>
@@ -1827,6 +1826,7 @@ for all threads to be fully started before returning.</p>
       <pre class="lines">
 
 
+286
 287
 288
 289
@@ -1839,11 +1839,10 @@ for all threads to be fully started before returning.</p>
 296
 297
 298
-299
-300</pre>
+299</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 287</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 286</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='ivar'>@size</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span> <span class='rbrace'>}</span>
@@ -1869,7 +1868,7 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Tue Sep  1 08:57:10 2026 by
+  Generated on Tue Sep  1 09:00:08 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
