@@ -51,11 +51,10 @@ module AtomicRuby
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
-    AUTOSCALE_GROWTH_SAMPLES = 3
     AUTOSCALE_IDLE_TIME = 1
     AUTOSCALE_INTERVAL = 0.01
     AUTOSCALE_WINDOW = 0.05
-    private_constant :AUTOSCALE_GROWTH_SAMPLES, :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INTERVAL, :AUTOSCALE_WINDOW
+    private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INTERVAL, :AUTOSCALE_WINDOW
 
     class Error < StandardError; end
 
@@ -379,7 +378,6 @@ module AtomicRuby
       previous_snapshot = @thread_pool_monitor.snapshot
       pressure_started_at = nil
       idle_started_at = nil
-      growth_samples = 0
       phase_samples = [0, 0, 0]
 
       loop do
@@ -395,7 +393,6 @@ module AtomicRuby
           pressure_started_at = nil
           previous_snapshot = snapshot
           idle_started_at ||= now
-          growth_samples = 0
           phase_samples.fill(0)
 
           if now - idle_started_at >= AUTOSCALE_IDLE_TIME
@@ -412,13 +409,9 @@ module AtomicRuby
             phase_samples.fill(0)
           elsif now - pressure_started_at >= AUTOSCALE_WINDOW
             if should_grow?(previous_snapshot, snapshot, phase_samples, now - pressure_started_at)
-              growth_samples += 1
-              if growth_samples >= AUTOSCALE_GROWTH_SAMPLES
-                spawn_worker(temporary: true)
-                growth_samples = 0
-              end
-            else
-              growth_samples = 0
+              worker_count = @threads.length
+              workers_to_add = [worker_count, @queue.size, @max_size - worker_count].min
+              workers_to_add.times { spawn_worker(temporary: true) }
             end
             previous_snapshot = snapshot
             pressure_started_at = now

@@ -45,8 +45,6 @@ module AtomicRuby
   # @note This class is NOT Ractor-safe as it contains mutable thread state
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
-    AUTOSCALE_GROWTH_SAMPLES: ::Integer
-
     AUTOSCALE_IDLE_TIME: ::Integer
 
     AUTOSCALE_INTERVAL: ::Float

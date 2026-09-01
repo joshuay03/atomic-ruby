@@ -222,6 +222,23 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_scales_up_promptly_for_a_burst_of_blocking_work
+    gc_stress = GC.stress
+    GC.stress = false
+    release = AtomicBoolean.new(false)
+    pool = AtomicThreadPool.new(size: 1, max_size: 8)
+    8.times { pool << proc { sleep 0.5 until release.true? } }
+
+    begin
+      wait_until(timeout: 1) { pool.size == 8 && pool.active_count == 8 }
+      assert_equal 8, pool.active_count
+    ensure
+      release.make_true
+      pool.shutdown
+      GC.stress = gc_stress
+    end
+  end
+
   def test_scales_up_for_mostly_blocking_work
     pool = AtomicThreadPool.new(size: 1, max_size: 2)
     pool.instance_variable_set(:@active_thread_count, Atom.new(1))
