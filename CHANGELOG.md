@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.15.5] - 2026-09-03
+
 - Adapt `AtomicThreadPool` scaling to workload pressure
 
 ## [0.15.4] - 2026-09-01
