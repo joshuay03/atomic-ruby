@@ -239,13 +239,32 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_scales_up_for_short_blocking_work
+    gc_stress = GC.stress
+    GC.stress = false
+    latch = AtomicCountDownLatch.new(16)
+    pool = AtomicThreadPool.new(size: 1, max_size: 16)
+    16.times do
+      pool << proc do
+        sleep 0.02
+        latch.count_down
+      end
+    end
+
+    latch.wait
+    assert_operator pool.size, :>=, 8
+  ensure
+    pool&.shutdown
+    GC.stress = gc_stress
+  end
+
   def test_scales_up_for_mostly_blocking_work
     pool = AtomicThreadPool.new(size: 1, max_size: 2)
     pool.instance_variable_set(:@active_thread_count, Atom.new(1))
     previous_snapshot = [0, 0, 0, 0, 0, 0, 0]
     snapshot = [0, 0, 0, 10_000_000, 40_000_000, 60_000_000, 10_000_000]
 
-    assert pool.send(:should_grow?, previous_snapshot, snapshot, [0, 0, 0], 0.05)
+    assert_equal :up, pool.send(:scaling_direction, previous_snapshot, snapshot, [0, 0, 0], 0.05)
   ensure
     pool&.shutdown
   end
@@ -264,6 +283,22 @@ class TestAtomicThreadPool < Minitest::Test
       release.make_true
       pool.shutdown
     end
+  end
+
+  def test_does_not_scale_up_for_short_cpu_bound_work
+    latch = AtomicCountDownLatch.new(16)
+    pool = AtomicThreadPool.new(size: 1, max_size: 16)
+    16.times do
+      pool << proc do
+        run_cpu_bound_work(duration: 0.01)
+        latch.count_down
+      end
+    end
+
+    latch.wait
+    assert_equal 1, pool.size
+  ensure
+    pool&.shutdown
   end
 
   def test_does_not_scale_up_for_mostly_cpu_bound_work
@@ -288,6 +323,54 @@ class TestAtomicThreadPool < Minitest::Test
     end
   end
 
+  def test_adapts_promptly_to_changing_workloads
+    gc_stress = GC.stress
+    GC.stress = false
+    release = AtomicBoolean.new(false)
+    cpu_work_finished = AtomicCountDownLatch.new(64)
+    pool = AtomicThreadPool.new(size: 1, max_size: 8)
+    8.times { pool << proc { sleep 0.5 until release.true? } }
+
+    begin
+      wait_until { pool.size == 8 && pool.active_count == 8 }
+      release.make_true
+      wait_until { pool.active_count.zero? }
+
+      64.times do
+        pool << proc do
+          run_cpu_bound_work(duration: 0.01)
+          cpu_work_finished.count_down
+        end
+      end
+
+      wait_until(timeout: 1) { pool.size == 1 && pool.queue_size.positive? }
+      assert_equal 1, pool.size
+
+      cpu_work_finished.wait
+      release.make_false
+      8.times { pool << proc { sleep 0.5 until release.true? } }
+      wait_until(timeout: 1) { pool.size == 8 && pool.active_count == 8 }
+      assert_equal 8, pool.active_count
+    ensure
+      release.make_true
+      pool.shutdown
+      GC.stress = gc_stress
+    end
+  end
+
+  def test_scales_down_for_mostly_cpu_bound_work
+    pool = AtomicThreadPool.new(size: 1, max_size: 2)
+    pool.send(:spawn_worker, temporary: true)
+    wait_until { pool.size == 2 }
+    pool.instance_variable_set(:@active_thread_count, Atom.new(2))
+    previous_snapshot = [0, 0, 0, 0, 0, 0, 0]
+    snapshot = [0, 0, 0, 60_000_000, 40_000_000, 10_000_000, 40_000_000]
+
+    assert_equal :down, pool.send(:scaling_direction, previous_snapshot, snapshot, [0, 0, 0], 0.05)
+  ensure
+    pool&.shutdown
+  end
+
   def test_scales_down_after_blocking_work
     release = AtomicBoolean.new(false)
     pool = AtomicThreadPool.new(size: 1, max_size: 3)
@@ -305,6 +388,11 @@ class TestAtomicThreadPool < Minitest::Test
   end
 
   private
+
+  def run_cpu_bound_work(duration:)
+    deadline = Process.clock_gettime(Process::CLOCK_THREAD_CPUTIME_ID) + duration
+    1 while Process.clock_gettime(Process::CLOCK_THREAD_CPUTIME_ID) < deadline
+  end
 
   def wait_until(timeout: 5)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout

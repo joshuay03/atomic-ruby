@@ -52,9 +52,10 @@ module AtomicRuby
   #   that cannot be safely shared across ractors.
   class AtomicThreadPool
     AUTOSCALE_IDLE_TIME = 5
-    AUTOSCALE_INTERVAL = 0.01
-    AUTOSCALE_WINDOW = 0.05
-    private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INTERVAL, :AUTOSCALE_WINDOW
+    AUTOSCALE_INITIAL_WINDOW = 0.002
+    AUTOSCALE_MAX_WINDOW = 0.05
+    AUTOSCALE_SAMPLES_PER_WINDOW = 5
+    private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INITIAL_WINDOW, :AUTOSCALE_MAX_WINDOW, :AUTOSCALE_SAMPLES_PER_WINDOW
 
     class Error < StandardError; end
 
@@ -70,8 +71,9 @@ module AtomicRuby
     # if work remains queued while its active workers spend most of their time
     # blocked outside the GVL, but not when Ruby execution is using the
     # available CPU.
-    # Temporary workers remain available between bursts before the pool returns
-    # to its baseline size. Omitting `max_size` creates a fixed-size pool.
+    # Temporary workers remain available between blocking bursts, but retire
+    # when Ruby execution becomes the bottleneck or they remain idle. Omitting
+    # `max_size` creates a fixed-size pool.
     #
     # @param size [Integer] The baseline number of worker threads (must be positive)
     # @param max_size [Integer, Float, nil] Maximum number of worker threads,
@@ -122,7 +124,8 @@ module AtomicRuby
       @next_thread_number = 0
       if adaptive?
         @autoscale_available = AtomicConditionVariable.new
-        @trim_requested = AtomicBoolean.new(false)
+        @idle_trim_requested = AtomicBoolean.new(false)
+        @ruby_cpu_trim_requested = AtomicBoolean.new(false)
         @thread_pool_monitor = ThreadPoolMonitor.new
         @thread_pool_monitor.start
       end
@@ -155,7 +158,7 @@ module AtomicRuby
     # @rbs (Proc work) -> void
     def <<(work)
       Thread.handle_interrupt(Exception => :never) do
-        @trim_requested&.make_false
+        @idle_trim_requested&.make_false
         raise EnqueuedWorkAfterShutdownError unless @queue.push(work)
 
         @work_available.signal
@@ -309,7 +312,8 @@ module AtomicRuby
 
     # Creates a worker thread.
     #
-    # Temporary workers leave after the queue remains empty.
+    # Temporary workers retire when Ruby execution becomes the bottleneck or
+    # they remain idle.
     #
     # @param temporary [true, false] whether the worker belongs above the baseline
     # @return [Thread]
@@ -333,10 +337,13 @@ module AtomicRuby
             should_exit = false
 
             @work_available.wait do
-              work = @queue.pop
-              unless work
-                should_exit = @shutdown.true? && @queue.empty?
-                should_exit ||= temporary && @trim_requested.true? && @queue.empty?
+              should_exit = temporary && @ruby_cpu_trim_requested.true?
+              unless should_exit
+                work = @queue.pop
+                unless work
+                  should_exit = @shutdown.true? && @queue.empty?
+                  should_exit ||= temporary && @idle_trim_requested.true? && @queue.empty?
+                end
               end
               work || should_exit
             end
@@ -344,6 +351,10 @@ module AtomicRuby
             break if should_exit
 
             @active_thread_count.swap { |current_count| current_count + 1 }
+            if temporary
+              work_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+              running_cpu_time_at_start = @thread_pool_monitor.snapshot[6]
+            end
             begin
               @thread_pool_monitor&.start_work
               work.call
@@ -357,6 +368,14 @@ module AtomicRuby
             ensure
               @thread_pool_monitor&.stop_work
               @active_thread_count.swap { |current_count| current_count - 1 }
+              if temporary && !@queue.empty?
+                elapsed_time = Process.clock_gettime(Process::CLOCK_MONOTONIC) - work_started_at
+                running_cpu_time = @thread_pool_monitor.snapshot[6] - running_cpu_time_at_start
+                if running_cpu_time * 2 >= elapsed_time * 1_000_000_000
+                  @ruby_cpu_trim_requested.make_true
+                  @work_available.broadcast
+                end
+              end
             end
           end
         ensure
@@ -369,7 +388,10 @@ module AtomicRuby
       thread
     end
 
-    # Adds temporary workers while queued work is held up by blocked workers.
+    # Scales temporary workers in response to workload pressure.
+    #
+    # Sampling starts aggressively so the pool can react to short bursts, then
+    # backs off when more workers would not improve throughput.
     #
     # @return [void]
     #
@@ -379,8 +401,10 @@ module AtomicRuby
       pressure_started_at = nil
       idle_started_at = nil
       phase_samples = [0, 0, 0]
+      sampling_window = AUTOSCALE_INITIAL_WINDOW
 
       loop do
+        @ruby_cpu_trim_requested.make_false if @alive_thread_count.value <= @size
         @autoscale_available.wait do
           @shutdown.true? || !@queue.empty? || @alive_thread_count.value > @size
         end
@@ -394,24 +418,36 @@ module AtomicRuby
           previous_snapshot = snapshot
           idle_started_at ||= now
           phase_samples.fill(0)
+          sampling_window = AUTOSCALE_INITIAL_WINDOW
 
           if now - idle_started_at >= AUTOSCALE_IDLE_TIME
-            @trim_requested.make_true
+            @idle_trim_requested.make_true
             @work_available.broadcast
           end
         else
-          @trim_requested.make_false
+          @idle_trim_requested.make_false
           idle_started_at = nil
 
           if pressure_started_at.nil?
             previous_snapshot = snapshot
             pressure_started_at = now
             phase_samples.fill(0)
-          elsif now - pressure_started_at >= AUTOSCALE_WINDOW
-            if should_grow?(previous_snapshot, snapshot, phase_samples, now - pressure_started_at)
+          elsif now - pressure_started_at >= sampling_window
+            case scaling_direction(previous_snapshot, snapshot, phase_samples, now - pressure_started_at)
+            when :up
+              @ruby_cpu_trim_requested.make_false
               worker_count = @threads.length
               workers_to_add = [worker_count, @queue.size, @max_size - worker_count].min
               workers_to_add.times { spawn_worker(temporary: true) }
+              sampling_window = AUTOSCALE_INITIAL_WINDOW
+            when :down
+              unless @ruby_cpu_trim_requested.true?
+                @ruby_cpu_trim_requested.make_true
+                @work_available.broadcast
+              end
+              sampling_window = [sampling_window * 2, AUTOSCALE_MAX_WINDOW].min
+            else
+              sampling_window = [sampling_window * 2, AUTOSCALE_MAX_WINDOW].min
             end
             previous_snapshot = snapshot
             pressure_started_at = now
@@ -421,30 +457,28 @@ module AtomicRuby
           end
         end
 
-        sleep AUTOSCALE_INTERVAL
+        sleep((@queue.empty? ? AUTOSCALE_MAX_WINDOW : sampling_window) / AUTOSCALE_SAMPLES_PER_WINDOW)
       end
     end
 
-    # Returns whether another worker is likely to improve throughput.
+    # Returns the direction in which the pool should scale.
     #
     # Requiring workers to spend a majority of their time blocked outside the
-    # GVL recognizes blocking operations. The pool only grows while its workers
-    # use less than half of one CPU, avoiding extra threads when Ruby
-    # execution is the bottleneck without mistaking OS scheduling delays for
-    # GVL contention.
+    # GVL recognizes blocking operations. The pool grows while Ruby execution
+    # uses less than half of one CPU and shrinks when Ruby execution becomes
+    # the bottleneck, without mistaking OS scheduling delays for GVL contention.
     #
     # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
     # @param snapshot [Array<Integer>] current GVL state snapshot
     # @param phase_samples [Array<Integer>] sampled current GVL states
     # @param elapsed_time [Float] seconds covered by the snapshots
-    # @return [true, false]
+    # @return [:up, :down, nil]
     #
-    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
-    def should_grow?(previous_snapshot, snapshot, phase_samples, elapsed_time)
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> (:up | :down)?
+    def scaling_direction(previous_snapshot, snapshot, phase_samples, elapsed_time)
       @threads.select!(&:alive?)
       workers = @threads
-      return false if workers.length >= @max_size
-      return false if @active_thread_count.value < workers.length
+      return if @active_thread_count.value < workers.length
 
       running_time = snapshot[3] - previous_snapshot[3]
       waiting_time = snapshot[4] - previous_snapshot[4]
@@ -452,15 +486,17 @@ module AtomicRuby
       running_cpu_time = snapshot[6] - previous_snapshot[6]
       total_time = running_time + waiting_time + blocked_time
 
-      minimum_measured_time = (AUTOSCALE_WINDOW * 1_000_000_000 * workers.length / 2).to_i
+      minimum_measured_time = (elapsed_time * 1_000_000_000 * workers.length / 2).to_i
       if total_time < minimum_measured_time
         running_time, waiting_time, blocked_time = phase_samples
         total_time = running_time + waiting_time + blocked_time
       end
 
-      total_time.positive? &&
-        blocked_time * 2 > total_time &&
-        running_cpu_time * 2 < elapsed_time * 1_000_000_000
+      ruby_cpu_bound = running_cpu_time * 2 >= elapsed_time * 1_000_000_000
+      blocking = total_time.positive? && blocked_time * 2 > total_time && !ruby_cpu_bound
+
+      return :up if blocking && workers.length < @max_size
+      return :down if ruby_cpu_bound && workers.length > @size
     end
   end
 end

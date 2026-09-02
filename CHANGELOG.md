@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Adapt `AtomicThreadPool` scaling to workload pressure
+
 ## [0.15.4] - 2026-09-01
 
 - Keep temporary `AtomicThreadPool` workers alive for five seconds

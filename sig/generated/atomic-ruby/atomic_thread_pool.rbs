@@ -47,9 +47,11 @@ module AtomicRuby
   class AtomicThreadPool
     AUTOSCALE_IDLE_TIME: ::Integer
 
-    AUTOSCALE_INTERVAL: ::Float
+    AUTOSCALE_INITIAL_WINDOW: ::Float
 
-    AUTOSCALE_WINDOW: ::Float
+    AUTOSCALE_MAX_WINDOW: ::Float
+
+    AUTOSCALE_SAMPLES_PER_WINDOW: ::Integer
 
     class Error < StandardError
     end
@@ -66,8 +68,9 @@ module AtomicRuby
     # if work remains queued while its active workers spend most of their time
     # blocked outside the GVL, but not when Ruby execution is using the
     # available CPU.
-    # Temporary workers remain available between bursts before the pool returns
-    # to its baseline size. Omitting `max_size` creates a fixed-size pool.
+    # Temporary workers remain available between blocking bursts, but retire
+    # when Ruby execution becomes the bottleneck or they remain idle. Omitting
+    # `max_size` creates a fixed-size pool.
     #
     # @param size [Integer] The baseline number of worker threads (must be positive)
     # @param max_size [Integer, Float, nil] Maximum number of worker threads,
@@ -241,7 +244,8 @@ module AtomicRuby
 
     # Creates a worker thread.
     #
-    # Temporary workers leave after the queue remains empty.
+    # Temporary workers retire when Ruby execution becomes the bottleneck or
+    # they remain idle.
     #
     # @param temporary [true, false] whether the worker belongs above the baseline
     # @return [Thread]
@@ -249,29 +253,31 @@ module AtomicRuby
     # @rbs (?temporary: bool) -> Thread
     def spawn_worker: (?temporary: bool) -> Thread
 
-    # Adds temporary workers while queued work is held up by blocked workers.
+    # Scales temporary workers in response to workload pressure.
+    #
+    # Sampling starts aggressively so the pool can react to short bursts, then
+    # backs off when more workers would not improve throughput.
     #
     # @return [void]
     #
     # @rbs () -> void
     def autoscale: () -> void
 
-    # Returns whether another worker is likely to improve throughput.
+    # Returns the direction in which the pool should scale.
     #
     # Requiring workers to spend a majority of their time blocked outside the
-    # GVL recognizes blocking operations. The pool only grows while its workers
-    # use less than half of one CPU, avoiding extra threads when Ruby
-    # execution is the bottleneck without mistaking OS scheduling delays for
-    # GVL contention.
+    # GVL recognizes blocking operations. The pool grows while Ruby execution
+    # uses less than half of one CPU and shrinks when Ruby execution becomes
+    # the bottleneck, without mistaking OS scheduling delays for GVL contention.
     #
     # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
     # @param snapshot [Array<Integer>] current GVL state snapshot
     # @param phase_samples [Array<Integer>] sampled current GVL states
     # @param elapsed_time [Float] seconds covered by the snapshots
-    # @return [true, false]
+    # @return [:up, :down, nil]
     #
-    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
-    def should_grow?: (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> bool
+    # @rbs (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> (:up | :down)?
+    def scaling_direction: (Array[Integer] previous_snapshot, Array[Integer] snapshot, Array[Integer] phase_samples, Float elapsed_time) -> (:up | :down)?
   end
 end
 

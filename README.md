@@ -122,8 +122,10 @@ p results.sort      #=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 Pass `max_size` to let the pool temporarily add workers when queued work is
 held up by blocking operations. The pool measures time spent blocked outside
-the GVL and CPU time used by its workers, so it does not add more threads when
-Ruby execution is the bottleneck. It returns to `size` when the queue drains.
+the GVL and CPU time used while running Ruby, so it does not add more threads
+when Ruby execution is the bottleneck. Temporary workers remain available
+between blocking bursts, but retire when Ruby execution becomes the bottleneck
+or they remain idle.
 
 ```ruby
 pool = AtomicThreadPool.new(size: 4, max_size: 16)
