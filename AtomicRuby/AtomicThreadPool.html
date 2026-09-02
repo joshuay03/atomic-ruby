@@ -398,7 +398,7 @@ another.</p>
   
 
   
-    <span class="summary_desc"><div class='inline'><p>Adds temporary workers while queued work is held up by blocked workers.</p></div></span>
+    <span class="summary_desc"><div class='inline'><p>Scales temporary workers in response to workload pressure.</p></div></span>
   
 </li>
 
@@ -853,8 +853,8 @@ to size or <code>Float::INFINITY</code></p></div>
   <span class='ivar'>@next_thread_number</span> <span class='op'>=</span> <span class='int'>0</span>
   <span class='kw'>if</span> <span class='id identifier rubyid_adaptive?'>adaptive?</span>
     <span class='ivar'>@autoscale_available</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicConditionVariable.html" title="AtomicRuby::AtomicConditionVariable (class)">AtomicConditionVariable</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicConditionVariable.html#initialize-instance_method" title="AtomicRuby::AtomicConditionVariable#initialize (method)">new</a></span></span>
-    <span class='ivar'>@trim_requested</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicBoolean.html" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicBoolean.html#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
-    <span class='ivar'>@cpu_trim_requested</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicBoolean.html" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicBoolean.html#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
+    <span class='ivar'>@idle_trim_requested</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicBoolean.html" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicBoolean.html#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
+    <span class='ivar'>@ruby_cpu_trim_requested</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicBoolean.html" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicBoolean.html#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
     <span class='ivar'>@thread_pool_monitor</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="ThreadPoolMonitor.html" title="AtomicRuby::ThreadPoolMonitor (class)">ThreadPoolMonitor</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
     <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_start'>start</span>
   <span class='kw'>end</span>
@@ -972,7 +972,7 @@ Enqueueing is O(1) regardless of current queue depth.</p>
 
 <span class='kw'>def</span> <span class='op'>&lt;&lt;</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
   <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
-    <span class='ivar'>@trim_requested</span><span class='op'>&amp;.</span><span class='id identifier rubyid_make_false'>make_false</span>
+    <span class='ivar'>@idle_trim_requested</span><span class='op'>&amp;.</span><span class='id identifier rubyid_make_false'>make_false</span>
     <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="AtomicThreadPool/EnqueuedWorkAfterShutdownError.html" title="AtomicRuby::AtomicThreadPool::EnqueuedWorkAfterShutdownError (class)">EnqueuedWorkAfterShutdownError</a></span></span> <span class='kw'>unless</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_push'>push</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
 
     <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_signal'>signal</span>
@@ -1128,7 +1128,7 @@ waiting for work.</p>
   
 </h3><div class="docstring">
   <div class="discussion">
-    <p class="note returns_void">This method returns an undefined value.</p><p>Adds temporary workers while queued work is held up by blocked workers.</p>
+    <p class="note returns_void">This method returns an undefined value.</p><p>Scales temporary workers in response to workload pressure.</p>
 <p>Sampling starts aggressively so the pool can react to short bursts, then
 backs off when more workers would not improve throughput.</p>
 
@@ -1205,7 +1205,8 @@ backs off when more workers would not improve throughput.</p>
 458
 459
 460
-461</pre>
+461
+462</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 399</span>
@@ -1215,9 +1216,10 @@ backs off when more workers would not improve throughput.</p>
   <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>=</span> <span class='kw'>nil</span>
   <span class='id identifier rubyid_idle_started_at'>idle_started_at</span> <span class='op'>=</span> <span class='kw'>nil</span>
   <span class='id identifier rubyid_phase_samples'>phase_samples</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='int'>0</span><span class='comma'>,</span> <span class='int'>0</span><span class='comma'>,</span> <span class='int'>0</span><span class='rbracket'>]</span>
-  <span class='id identifier rubyid_window'>window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
+  <span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
 
   <span class='id identifier rubyid_loop'>loop</span> <span class='kw'>do</span>
+    <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_false'>make_false</span> <span class='kw'>if</span> <span class='ivar'>@alive_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span> <span class='op'>&lt;=</span> <span class='ivar'>@size</span>
     <span class='ivar'>@autoscale_available</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span> <span class='kw'>do</span>
       <span class='ivar'>@shutdown</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span> <span class='op'>||</span> <span class='op'>!</span><span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>||</span> <span class='ivar'>@alive_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
     <span class='kw'>end</span>
@@ -1231,36 +1233,36 @@ backs off when more workers would not improve throughput.</p>
       <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span>
       <span class='id identifier rubyid_idle_started_at'>idle_started_at</span> <span class='op'>||=</span> <span class='id identifier rubyid_now'>now</span>
       <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='period'>.</span><span class='id identifier rubyid_fill'>fill</span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
-      <span class='id identifier rubyid_window'>window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
+      <span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
 
       <span class='kw'>if</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_idle_started_at'>idle_started_at</span> <span class='op'>&gt;=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_IDLE_TIME-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_IDLE_TIME (constant)">AUTOSCALE_IDLE_TIME</a></span></span>
-        <span class='ivar'>@trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
+        <span class='ivar'>@idle_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
         <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span>
       <span class='kw'>end</span>
     <span class='kw'>else</span>
-      <span class='ivar'>@trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_false'>make_false</span>
+      <span class='ivar'>@idle_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_false'>make_false</span>
       <span class='id identifier rubyid_idle_started_at'>idle_started_at</span> <span class='op'>=</span> <span class='kw'>nil</span>
 
       <span class='kw'>if</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
         <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span>
         <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>=</span> <span class='id identifier rubyid_now'>now</span>
         <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='period'>.</span><span class='id identifier rubyid_fill'>fill</span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
-      <span class='kw'>elsif</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_window'>window</span>
+      <span class='kw'>elsif</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_sampling_window'>sampling_window</span>
         <span class='kw'>case</span> <span class='id identifier rubyid_scaling_direction'>scaling_direction</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_now'>now</span> <span class='op'>-</span> <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span><span class='rparen'>)</span>
         <span class='kw'>when</span> <span class='symbol'>:up</span>
-          <span class='ivar'>@cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_false'>make_false</span>
+          <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_false'>make_false</span>
           <span class='id identifier rubyid_worker_count'>worker_count</span> <span class='op'>=</span> <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span>
           <span class='id identifier rubyid_workers_to_add'>workers_to_add</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_worker_count'>worker_count</span><span class='comma'>,</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span><span class='comma'>,</span> <span class='ivar'>@max_size</span> <span class='op'>-</span> <span class='id identifier rubyid_worker_count'>worker_count</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_min'>min</span>
           <span class='id identifier rubyid_workers_to_add'>workers_to_add</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span><span class='lparen'>(</span><span class='label'>temporary:</span> <span class='kw'>true</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
-          <span class='id identifier rubyid_window'>window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
+          <span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_INITIAL_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_INITIAL_WINDOW (constant)">AUTOSCALE_INITIAL_WINDOW</a></span></span>
         <span class='kw'>when</span> <span class='symbol'>:down</span>
-          <span class='kw'>unless</span> <span class='ivar'>@cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
-            <span class='ivar'>@cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
+          <span class='kw'>unless</span> <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
+            <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
             <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span>
           <span class='kw'>end</span>
-          <span class='id identifier rubyid_window'>window</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_window'>window</span> <span class='op'>*</span> <span class='int'>2</span><span class='comma'>,</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_min'>min</span>
+          <span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>*</span> <span class='int'>2</span><span class='comma'>,</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_min'>min</span>
         <span class='kw'>else</span>
-          <span class='id identifier rubyid_window'>window</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_window'>window</span> <span class='op'>*</span> <span class='int'>2</span><span class='comma'>,</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_min'>min</span>
+          <span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_sampling_window'>sampling_window</span> <span class='op'>*</span> <span class='int'>2</span><span class='comma'>,</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_min'>min</span>
         <span class='kw'>end</span>
         <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='id identifier rubyid_snapshot'>snapshot</span>
         <span class='id identifier rubyid_pressure_started_at'>pressure_started_at</span> <span class='op'>=</span> <span class='id identifier rubyid_now'>now</span>
@@ -1270,7 +1272,7 @@ backs off when more workers would not improve throughput.</p>
       <span class='kw'>end</span>
     <span class='kw'>end</span>
 
-    <span class='id identifier rubyid_sleep'>sleep</span><span class='lparen'>(</span><span class='lparen'>(</span><span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>?</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span> <span class='op'>:</span> <span class='id identifier rubyid_window'>window</span><span class='rparen'>)</span> <span class='op'>/</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_SAMPLES_PER_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_SAMPLES_PER_WINDOW (constant)">AUTOSCALE_SAMPLES_PER_WINDOW</a></span></span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_sleep'>sleep</span><span class='lparen'>(</span><span class='lparen'>(</span><span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>?</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_MAX_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_MAX_WINDOW (constant)">AUTOSCALE_MAX_WINDOW</a></span></span> <span class='op'>:</span> <span class='id identifier rubyid_sampling_window'>sampling_window</span><span class='rparen'>)</span> <span class='op'>/</span> <span class='const'><span class='object_link'><a href="#AUTOSCALE_SAMPLES_PER_WINDOW-constant" title="AtomicRuby::AtomicThreadPool::AUTOSCALE_SAMPLES_PER_WINDOW (constant)">AUTOSCALE_SAMPLES_PER_WINDOW</a></span></span><span class='rparen'>)</span>
   <span class='kw'>end</span>
 <span class='kw'>end</span></pre>
     </td>
@@ -1436,9 +1438,9 @@ being submitted faster than it can be processed.</p>
   <div class="discussion">
     <p>Returns the direction in which the pool should scale.</p>
 <p>Requiring workers to spend a majority of their time blocked outside the
-GVL recognizes blocking operations. The pool grows while its workers use
-less than half of one CPU and shrinks when Ruby execution becomes the
-bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
+GVL recognizes blocking operations. The pool grows while Ruby execution
+uses less than half of one CPU and shrinks when Ruby execution becomes
+the bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
 
   </div>
 </div>
@@ -1524,7 +1526,6 @@ bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
       <pre class="lines">
 
 
-477
 478
 479
 480
@@ -1546,10 +1547,11 @@ bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
 496
 497
 498
-499</pre>
+499
+500</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 477</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 478</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_scaling_direction'>scaling_direction</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select!'>select!</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span>
@@ -1568,11 +1570,11 @@ bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
     <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>=</span> <span class='id identifier rubyid_running_time'>running_time</span> <span class='op'>+</span> <span class='id identifier rubyid_waiting_time'>waiting_time</span> <span class='op'>+</span> <span class='id identifier rubyid_blocked_time'>blocked_time</span>
   <span class='kw'>end</span>
 
-  <span class='id identifier rubyid_cpu_bound'>cpu_bound</span> <span class='op'>=</span> <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>*</span> <span class='int'>1_000_000_000</span>
-  <span class='id identifier rubyid_blocking'>blocking</span> <span class='op'>=</span> <span class='id identifier rubyid_total_time'>total_time</span><span class='period'>.</span><span class='id identifier rubyid_positive?'>positive?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;</span> <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_cpu_bound'>cpu_bound</span>
+  <span class='id identifier rubyid_ruby_cpu_bound'>ruby_cpu_bound</span> <span class='op'>=</span> <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>*</span> <span class='int'>1_000_000_000</span>
+  <span class='id identifier rubyid_blocking'>blocking</span> <span class='op'>=</span> <span class='id identifier rubyid_total_time'>total_time</span><span class='period'>.</span><span class='id identifier rubyid_positive?'>positive?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_blocked_time'>blocked_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;</span> <span class='id identifier rubyid_total_time'>total_time</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_ruby_cpu_bound'>ruby_cpu_bound</span>
 
   <span class='kw'>return</span> <span class='symbol'>:up</span> <span class='kw'>if</span> <span class='id identifier rubyid_blocking'>blocking</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span> <span class='op'>&lt;</span> <span class='ivar'>@max_size</span>
-  <span class='kw'>return</span> <span class='symbol'>:down</span> <span class='kw'>if</span> <span class='id identifier rubyid_cpu_bound'>cpu_bound</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
+  <span class='kw'>return</span> <span class='symbol'>:down</span> <span class='kw'>if</span> <span class='id identifier rubyid_ruby_cpu_bound'>ruby_cpu_bound</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_workers'>workers</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -1684,8 +1686,8 @@ will raise an exception.</p>
 </h3><div class="docstring">
   <div class="discussion">
     <p>Creates a worker thread.</p>
-<p>Temporary workers leave when the workload becomes CPU-bound or after the
-queue remains empty.</p>
+<p>Temporary workers retire when Ruby execution becomes the bottleneck or
+they remain idle.</p>
 
   </div>
 </div>
@@ -1834,12 +1836,12 @@ queue remains empty.</p>
         <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>=</span> <span class='kw'>false</span>
 
         <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span> <span class='kw'>do</span>
-          <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>=</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
+          <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>=</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span>
           <span class='kw'>unless</span> <span class='id identifier rubyid_should_exit'>should_exit</span>
             <span class='id identifier rubyid_work'>work</span> <span class='op'>=</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_pop'>pop</span>
             <span class='kw'>unless</span> <span class='id identifier rubyid_work'>work</span>
               <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>=</span> <span class='ivar'>@shutdown</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-              <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>||=</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+              <span class='id identifier rubyid_should_exit'>should_exit</span> <span class='op'>||=</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@idle_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_true?'>true?</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
             <span class='kw'>end</span>
           <span class='kw'>end</span>
           <span class='id identifier rubyid_work'>work</span> <span class='op'>||</span> <span class='id identifier rubyid_should_exit'>should_exit</span>
@@ -1850,7 +1852,7 @@ queue remains empty.</p>
         <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>+</span> <span class='int'>1</span> <span class='rbrace'>}</span>
         <span class='kw'>if</span> <span class='id identifier rubyid_temporary'>temporary</span>
           <span class='id identifier rubyid_work_started_at'>work_started_at</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span>
-          <span class='id identifier rubyid_work_cpu_started_at'>work_cpu_started_at</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_THREAD_CPUTIME_ID</span><span class='rparen'>)</span>
+          <span class='id identifier rubyid_running_cpu_time_at_start'>running_cpu_time_at_start</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span>
         <span class='kw'>end</span>
         <span class='kw'>begin</span>
           <span class='ivar'>@thread_pool_monitor</span><span class='op'>&amp;.</span><span class='id identifier rubyid_start_work'>start_work</span>
@@ -1866,10 +1868,10 @@ queue remains empty.</p>
           <span class='ivar'>@thread_pool_monitor</span><span class='op'>&amp;.</span><span class='id identifier rubyid_stop_work'>stop_work</span>
           <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>-</span> <span class='int'>1</span> <span class='rbrace'>}</span>
           <span class='kw'>if</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-            <span class='id identifier rubyid_work_time'>work_time</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_work_started_at'>work_started_at</span>
-            <span class='id identifier rubyid_work_cpu_time'>work_cpu_time</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_THREAD_CPUTIME_ID</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_work_cpu_started_at'>work_cpu_started_at</span>
-            <span class='kw'>if</span> <span class='id identifier rubyid_work_cpu_time'>work_cpu_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_work_time'>work_time</span>
-              <span class='ivar'>@cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
+            <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_work_started_at'>work_started_at</span>
+            <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_running_cpu_time_at_start'>running_cpu_time_at_start</span>
+            <span class='kw'>if</span> <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>*</span> <span class='int'>2</span> <span class='op'>&gt;=</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>*</span> <span class='int'>1_000_000_000</span>
+              <span class='ivar'>@ruby_cpu_trim_requested</span><span class='period'>.</span><span class='id identifier rubyid_make_true'>make_true</span>
               <span class='ivar'>@work_available</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span>
             <span class='kw'>end</span>
           <span class='kw'>end</span>
@@ -1958,7 +1960,7 @@ for all threads to be fully started before returning.</p>
 </div>
 
       <div id="footer">
-  Generated on Wed Sep  2 21:36:28 2026 by
+  Generated on Wed Sep  2 22:00:21 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
