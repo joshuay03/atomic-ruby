@@ -563,6 +563,28 @@ another.</p>
 </li>
 
       
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#wait_for_capacity-instance_method" title="#wait_for_capacity (instance method)">#<strong>wait_for_capacity</strong> { ... } &#x21d2; untyped </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Blocks until the given block returns a truthy value, checking it again whenever a worker takes or finishes work.</p></div></span>
+  
+</li>
+
+      
     </ul>
     
   
@@ -827,7 +849,8 @@ to size or <code>Float::INFINITY</code></p></div>
 131
 132
 133
-134</pre>
+134
+135</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 106</span>
@@ -847,6 +870,7 @@ to size or <code>Float::INFINITY</code></p></div>
   <span class='ivar'>@queue</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicQueue.html" title="AtomicRuby::AtomicQueue (class)">AtomicQueue</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicQueue.html#initialize-instance_method" title="AtomicRuby::AtomicQueue#initialize (method)">new</a></span></span>
   <span class='ivar'>@shutdown</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicBoolean.html" title="AtomicRuby::AtomicBoolean (class)">AtomicBoolean</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicBoolean.html#initialize-instance_method" title="AtomicRuby::AtomicBoolean#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='kw'>false</span><span class='rparen'>)</span>
   <span class='ivar'>@work_available</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicConditionVariable.html" title="AtomicRuby::AtomicConditionVariable (class)">AtomicConditionVariable</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicConditionVariable.html#initialize-instance_method" title="AtomicRuby::AtomicConditionVariable#initialize (method)">new</a></span></span>
+  <span class='ivar'>@capacity_changed</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="AtomicConditionVariable.html" title="AtomicRuby::AtomicConditionVariable (class)">AtomicConditionVariable</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="AtomicConditionVariable.html#initialize-instance_method" title="AtomicRuby::AtomicConditionVariable#initialize (method)">new</a></span></span>
   <span class='ivar'>@alive_thread_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="Atom.html" title="AtomicRuby::Atom (class)">Atom</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="Atom.html#initialize-instance_method" title="AtomicRuby::Atom#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
   <span class='ivar'>@active_thread_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="Atom.html" title="AtomicRuby::Atom (class)">Atom</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="Atom.html#initialize-instance_method" title="AtomicRuby::Atom#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
@@ -957,7 +981,6 @@ Enqueueing is O(1) regardless of current queue depth.</p>
       <pre class="lines">
 
 
-159
 160
 161
 162
@@ -965,10 +988,11 @@ Enqueueing is O(1) regardless of current queue depth.</p>
 164
 165
 166
-167</pre>
+167
+168</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 159</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 160</span>
 
 <span class='kw'>def</span> <span class='op'>&lt;&lt;</span><span class='lparen'>(</span><span class='id identifier rubyid_work'>work</span><span class='rparen'>)</span>
   <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
@@ -1050,12 +1074,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-237
 238
-239</pre>
+239
+240</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 237</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 238</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_active_count'>active_count</span>
   <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1102,12 +1126,12 @@ waiting for work.</p>
       <pre class="lines">
 
 
-309
-310
-311</pre>
+329
+330
+331</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 309</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 329</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_adaptive?'>adaptive?</span>
   <span class='ivar'>@max_size</span> <span class='op'>&gt;</span> <span class='ivar'>@size</span>
@@ -1143,28 +1167,6 @@ backs off when more workers would not improve throughput.</p>
       <pre class="lines">
 
 
-399
-400
-401
-402
-403
-404
-405
-406
-407
-408
-409
-410
-411
-412
-413
-414
-415
-416
-417
-418
-419
-420
 421
 422
 423
@@ -1206,10 +1208,32 @@ backs off when more workers would not improve throughput.</p>
 459
 460
 461
-462</pre>
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 399</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 421</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_autoscale'>autoscale</span>
   <span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span>
@@ -1338,12 +1362,12 @@ parameters passed to the constructor.</p>
       <pre class="lines">
 
 
-184
 185
-186</pre>
+186
+187</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 184</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 185</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_length'>length</span>
   <span class='ivar'>@alive_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_value'>value</span>
@@ -1410,12 +1434,12 @@ being submitted faster than it can be processed.</p>
       <pre class="lines">
 
 
-206
 207
-208</pre>
+208
+209</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 206</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 207</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_length'>queue_length</span>
   <span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_size'>size</span>
@@ -1526,32 +1550,32 @@ the bottleneck, without mistaking OS scheduling delays for GVL contention.</p>
       <pre class="lines">
 
 
-478
-479
-480
-481
-482
-483
-484
-485
-486
-487
-488
-489
-490
-491
-492
-493
-494
-495
-496
-497
-498
-499
-500</pre>
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 478</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 500</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_scaling_direction'>scaling_direction</span><span class='lparen'>(</span><span class='id identifier rubyid_previous_snapshot'>previous_snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_snapshot'>snapshot</span><span class='comma'>,</span> <span class='id identifier rubyid_phase_samples'>phase_samples</span><span class='comma'>,</span> <span class='id identifier rubyid_elapsed_time'>elapsed_time</span><span class='rparen'>)</span>
   <span class='ivar'>@threads</span><span class='period'>.</span><span class='id identifier rubyid_select!'>select!</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:alive?</span><span class='rparen'>)</span>
@@ -1643,20 +1667,20 @@ will raise an exception.</p>
       <pre class="lines">
 
 
-266
-267
-268
-269
-270
-271
-272
-273
-274
-275
-276</pre>
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 266</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 286</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_shutdown'>shutdown</span>
   <span class='const'>Thread</span><span class='period'>.</span><span class='id identifier rubyid_handle_interrupt'>handle_interrupt</span><span class='lparen'>(</span><span class='const'>Exception</span> <span class='op'>=&gt;</span> <span class='symbol'>:never</span><span class='rparen'>)</span> <span class='kw'>do</span>
@@ -1746,26 +1770,6 @@ they remain idle.</p>
       <pre class="lines">
 
 
-322
-323
-324
-325
-326
-327
-328
-329
-330
-331
-332
-333
-334
-335
-336
-337
-338
-339
-340
-341
 342
 343
 344
@@ -1813,10 +1817,32 @@ they remain idle.</p>
 386
 387
 388
-389</pre>
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 322</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 342</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span><span class='lparen'>(</span><span class='label'>temporary:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_thread_number'>thread_number</span> <span class='op'>=</span> <span class='ivar'>@next_thread_number</span>
@@ -1850,6 +1876,7 @@ they remain idle.</p>
         <span class='kw'>break</span> <span class='kw'>if</span> <span class='id identifier rubyid_should_exit'>should_exit</span>
 
         <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>+</span> <span class='int'>1</span> <span class='rbrace'>}</span>
+        <span class='ivar'>@capacity_changed</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span> <span class='kw'>unless</span> <span class='ivar'>@capacity_changed</span><span class='period'>.</span><span class='id identifier rubyid_waiter_count'>waiter_count</span><span class='period'>.</span><span class='id identifier rubyid_zero?'>zero?</span>
         <span class='kw'>if</span> <span class='id identifier rubyid_temporary'>temporary</span>
           <span class='id identifier rubyid_work_started_at'>work_started_at</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span>
           <span class='id identifier rubyid_running_cpu_time_at_start'>running_cpu_time_at_start</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span>
@@ -1867,6 +1894,7 @@ they remain idle.</p>
         <span class='kw'>ensure</span>
           <span class='ivar'>@thread_pool_monitor</span><span class='op'>&amp;.</span><span class='id identifier rubyid_stop_work'>stop_work</span>
           <span class='ivar'>@active_thread_count</span><span class='period'>.</span><span class='id identifier rubyid_swap'>swap</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_current_count'>current_count</span><span class='op'>|</span> <span class='id identifier rubyid_current_count'>current_count</span> <span class='op'>-</span> <span class='int'>1</span> <span class='rbrace'>}</span>
+          <span class='ivar'>@capacity_changed</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span> <span class='kw'>unless</span> <span class='ivar'>@capacity_changed</span><span class='period'>.</span><span class='id identifier rubyid_waiter_count'>waiter_count</span><span class='period'>.</span><span class='id identifier rubyid_zero?'>zero?</span>
           <span class='kw'>if</span> <span class='id identifier rubyid_temporary'>temporary</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='ivar'>@queue</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
             <span class='id identifier rubyid_elapsed_time'>elapsed_time</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_work_started_at'>work_started_at</span>
             <span class='id identifier rubyid_running_cpu_time'>running_cpu_time</span> <span class='op'>=</span> <span class='ivar'>@thread_pool_monitor</span><span class='period'>.</span><span class='id identifier rubyid_snapshot'>snapshot</span><span class='lbracket'>[</span><span class='int'>6</span><span class='rbracket'>]</span> <span class='op'>-</span> <span class='id identifier rubyid_running_cpu_time_at_start'>running_cpu_time_at_start</span>
@@ -1918,23 +1946,23 @@ for all threads to be fully started before returning.</p>
       <pre class="lines">
 
 
-289
-290
-291
-292
-293
-294
-295
-296
-297
-298
-299
-300
-301
-302</pre>
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 289</span>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 309</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='ivar'>@size</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_spawn_worker'>spawn_worker</span> <span class='rbrace'>}</span>
@@ -1955,12 +1983,111 @@ for all threads to be fully started before returning.</p>
 </table>
 </div>
     
+      <div class="method_details ">
+  <h3 class="signature " id="wait_for_capacity-instance_method">
+  
+    #<strong>wait_for_capacity</strong> { ... } &#x21d2; <tt>untyped</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Blocks until the given block returns a truthy value, checking it again
+whenever a worker takes or finishes work.</p>
+<p>Useful for applying backpressure, such as holding off on accepting more
+work until the pool has capacity for it.</p>
+
+  </div>
+</div>
+<div class="tags">
+  
+  <div class="examples">
+    <h4 class="tag_title">Examples:</h4>
+    
+      
+        <h5 class="example_title"><div class='inline'><p>Wait until no work is queued</p></div></h5>
+      
+      <pre class="example code"><code><span class='id identifier rubyid_pool'>pool</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="" title="AtomicRuby::AtomicThreadPool (class)">AtomicThreadPool</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="#initialize-instance_method" title="AtomicRuby::AtomicThreadPool#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='label'>size:</span> <span class='int'>2</span><span class='rparen'>)</span>
+<span class='int'>5</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_pool'>pool</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_proc'>proc</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_sleep'>sleep</span><span class='lparen'>(</span><span class='float'>0.1</span><span class='rparen'>)</span> <span class='rbrace'>}</span> <span class='rbrace'>}</span>
+<span class='id identifier rubyid_pool'>pool</span><span class='period'>.</span><span class='id identifier rubyid_wait_for_capacity'>wait_for_capacity</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_pool'>pool</span><span class='period'>.</span><span class='id identifier rubyid_queue_length'>queue_length</span><span class='period'>.</span><span class='id identifier rubyid_zero?'>zero?</span> <span class='rbrace'>}</span> <span class='comment'>#=&gt; true</span></code></pre>
+    
+  </div>
+
+<p class="tag_title">Yields:</p>
+<ul class="yield">
+  
+    <li>
+      
+      
+        <span class='type'></span>
+      
+      
+      
+    </li>
+  
+</ul>
+<p class="tag_title">Yield Returns:</p>
+<ul class="yieldreturn">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>untyped</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>Truthy to stop waiting, falsy to keep waiting</p></div>
+      
+    </li>
+  
+</ul>
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>untyped</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>The first truthy value returned by the block</p></div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+257
+258
+259</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/atomic-ruby/atomic_thread_pool.rb', line 257</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_wait_for_capacity'>wait_for_capacity</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='id identifier rubyid_block'>block</span><span class='rparen'>)</span>
+  <span class='ivar'>@capacity_changed</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='id identifier rubyid_block'>block</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
   </div>
 
 </div>
 
       <div id="footer">
-  Generated on Wed Sep  2 23:36:59 2026 by
+  Generated on Sat Oct 17 21:52:23 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.1.0).
 </div>
