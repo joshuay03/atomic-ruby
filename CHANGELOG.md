@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Add `AtomicThreadPool#wait_for_capacity`
+
 ## [0.15.5] - 2026-09-03
 
 - Adapt `AtomicThreadPool` scaling to workload pressure

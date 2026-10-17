@@ -195,6 +195,23 @@ module AtomicRuby
     # @rbs () -> Integer
     def active_count: () -> Integer
 
+    # Blocks until the given block returns a truthy value, checking it again
+    # whenever a worker takes or finishes work.
+    #
+    # Useful for applying backpressure, such as holding off on accepting more
+    # work until the pool has capacity for it.
+    #
+    # @yieldreturn [untyped] Truthy to stop waiting, falsy to keep waiting
+    # @return [untyped] The first truthy value returned by the block
+    #
+    # @example Wait until no work is queued
+    #   pool = AtomicThreadPool.new(size: 2)
+    #   5.times { pool << proc { sleep(0.1) } }
+    #   pool.wait_for_capacity { pool.queue_length.zero? } #=> true
+    #
+    # @rbs () { () -> untyped } -> untyped
+    def wait_for_capacity: () { () -> untyped } -> untyped
+
     # Gracefully shuts down the thread pool.
     #
     # This method:

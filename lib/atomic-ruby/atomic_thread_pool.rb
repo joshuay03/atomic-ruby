@@ -118,6 +118,7 @@ module AtomicRuby
       @queue = AtomicQueue.new
       @shutdown = AtomicBoolean.new(false)
       @work_available = AtomicConditionVariable.new
+      @capacity_changed = AtomicConditionVariable.new
       @alive_thread_count = Atom.new(0)
       @active_thread_count = Atom.new(0)
       @threads = []
@@ -238,6 +239,25 @@ module AtomicRuby
       @active_thread_count.value
     end
 
+    # Blocks until the given block returns a truthy value, checking it again
+    # whenever a worker takes or finishes work.
+    #
+    # Useful for applying backpressure, such as holding off on accepting more
+    # work until the pool has capacity for it.
+    #
+    # @yieldreturn [untyped] Truthy to stop waiting, falsy to keep waiting
+    # @return [untyped] The first truthy value returned by the block
+    #
+    # @example Wait until no work is queued
+    #   pool = AtomicThreadPool.new(size: 2)
+    #   5.times { pool << proc { sleep(0.1) } }
+    #   pool.wait_for_capacity { pool.queue_length.zero? } #=> true
+    #
+    # @rbs () { () -> untyped } -> untyped
+    def wait_for_capacity(&block)
+      @capacity_changed.wait(&block)
+    end
+
     # Gracefully shuts down the thread pool.
     #
     # This method:
@@ -351,6 +371,7 @@ module AtomicRuby
             break if should_exit
 
             @active_thread_count.swap { |current_count| current_count + 1 }
+            @capacity_changed.broadcast unless @capacity_changed.waiter_count.zero?
             if temporary
               work_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
               running_cpu_time_at_start = @thread_pool_monitor.snapshot[6]
@@ -368,6 +389,7 @@ module AtomicRuby
             ensure
               @thread_pool_monitor&.stop_work
               @active_thread_count.swap { |current_count| current_count - 1 }
+              @capacity_changed.broadcast unless @capacity_changed.waiter_count.zero?
               if temporary && !@queue.empty?
                 elapsed_time = Process.clock_gettime(Process::CLOCK_MONOTONIC) - work_started_at
                 running_cpu_time = @thread_pool_monitor.snapshot[6] - running_cpu_time_at_start

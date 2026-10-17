@@ -208,6 +208,19 @@ class TestAtomicThreadPool < Minitest::Test
     pool.shutdown
   end
 
+  def test_wait_for_capacity
+    should_sleep = AtomicBoolean.new(true)
+    pool = AtomicThreadPool.new(size: 1)
+    2.times { pool << proc { sleep 0.01 while should_sleep.true? } }
+    waiter = Thread.new { pool.wait_for_capacity { pool.queue_length.zero? } }
+    sleep 0.1
+    assert waiter.alive?
+    should_sleep.make_false
+    assert waiter.join(5)
+    assert_equal true, waiter.value
+    pool.shutdown
+  end
+
   def test_scales_up_for_blocking_work
     release = AtomicBoolean.new(false)
     pool = AtomicThreadPool.new(size: 1, max_size: Float::INFINITY)
