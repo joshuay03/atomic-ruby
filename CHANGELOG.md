@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-18
+
 - Add `AtomicThreadPool#wait_for_capacity`
 
 ## [0.15.5] - 2026-09-03
