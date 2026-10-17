@@ -55,7 +55,8 @@ module AtomicRuby
     AUTOSCALE_INITIAL_WINDOW = 0.002
     AUTOSCALE_MAX_WINDOW = 0.05
     AUTOSCALE_SAMPLES_PER_WINDOW = 5
-    private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INITIAL_WINDOW, :AUTOSCALE_MAX_WINDOW, :AUTOSCALE_SAMPLES_PER_WINDOW
+    AUTOSCALE_RUBY_CPU_SHARE = 0.75
+    private_constant :AUTOSCALE_IDLE_TIME, :AUTOSCALE_INITIAL_WINDOW, :AUTOSCALE_MAX_WINDOW, :AUTOSCALE_SAMPLES_PER_WINDOW, :AUTOSCALE_RUBY_CPU_SHARE
 
     class Error < StandardError; end
 
@@ -393,7 +394,7 @@ module AtomicRuby
               if temporary && !@queue.empty?
                 elapsed_time = Process.clock_gettime(Process::CLOCK_MONOTONIC) - work_started_at
                 running_cpu_time = @thread_pool_monitor.snapshot[6] - running_cpu_time_at_start
-                if running_cpu_time * 2 >= elapsed_time * 1_000_000_000
+                if running_cpu_time >= elapsed_time * 1_000_000_000 * AUTOSCALE_RUBY_CPU_SHARE
                   @ruby_cpu_trim_requested.make_true
                   @work_available.broadcast
                 end
@@ -487,8 +488,9 @@ module AtomicRuby
     #
     # Requiring workers to spend a majority of their time blocked outside the
     # GVL recognizes blocking operations. The pool grows while Ruby execution
-    # uses less than half of one CPU and shrinks when Ruby execution becomes
-    # the bottleneck, without mistaking OS scheduling delays for GVL contention.
+    # uses less than three quarters of one CPU and shrinks when Ruby execution
+    # becomes the bottleneck, without mistaking OS scheduling delays for GVL
+    # contention.
     #
     # @param previous_snapshot [Array<Integer>] previous GVL state snapshot
     # @param snapshot [Array<Integer>] current GVL state snapshot
@@ -514,7 +516,7 @@ module AtomicRuby
         total_time = running_time + waiting_time + blocked_time
       end
 
-      ruby_cpu_bound = running_cpu_time * 2 >= elapsed_time * 1_000_000_000
+      ruby_cpu_bound = running_cpu_time >= elapsed_time * 1_000_000_000 * AUTOSCALE_RUBY_CPU_SHARE
       blocking = total_time.positive? && blocked_time * 2 > total_time && !ruby_cpu_bound
 
       return :up if blocking && workers.length < @max_size

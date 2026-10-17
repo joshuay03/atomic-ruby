@@ -282,6 +282,17 @@ class TestAtomicThreadPool < Minitest::Test
     pool&.shutdown
   end
 
+  def test_scales_up_for_mostly_blocking_work_using_over_half_a_cpu
+    pool = AtomicThreadPool.new(size: 2, max_size: 4)
+    pool.instance_variable_set(:@active_thread_count, Atom.new(2))
+    previous_snapshot = [0, 0, 0, 0, 0, 0, 0]
+    snapshot = [0, 0, 0, 30_000_000, 5_000_000, 65_000_000, 30_000_000]
+
+    assert_equal :up, pool.send(:scaling_direction, previous_snapshot, snapshot, [0, 0, 0], 0.05)
+  ensure
+    pool&.shutdown
+  end
+
   def test_does_not_scale_up_for_cpu_bound_work
     release = AtomicBoolean.new(false)
     pool = AtomicThreadPool.new(size: 1, max_size: 3)
