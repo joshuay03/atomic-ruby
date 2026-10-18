@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.16.1] - 2026-10-18
+
 - Grow `AtomicThreadPool` until Ruby execution uses three quarters of one CPU
 
 ## [0.16.0] - 2026-10-18

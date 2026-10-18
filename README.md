@@ -270,7 +270,7 @@ puts "Atomic Ruby Atomic Bank Account:     #{results[2].real.round(6)} seconds"
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.8
-atomic-ruby version:     0.16.0
+atomic-ruby version:     0.16.1
 
 Balances:
 Synchronized Bank Account Balance:           975
@@ -361,7 +361,7 @@ end
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.8
-atomic-ruby version:     0.16.0
+atomic-ruby version:     0.16.1
 
 Warming up --------------------------------------
           Synchronized Boolean Toggle   165.000 i/100ms
@@ -444,7 +444,7 @@ end
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_condition_variable_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.16.0
+atomic-ruby version: 0.16.1
 
 Warming up --------------------------------------
       Synchronized Condition Variable Wait/Signal     4.062k i/100ms
@@ -519,7 +519,7 @@ end
 > bundle exec rake clobber && bundle exec rake compile && bundle exec ruby examples/atomic_queue_benchmark.rb
 
 ruby version:        ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
-atomic-ruby version: 0.16.0
+atomic-ruby version: 0.16.1
 
 Warming up --------------------------------------
       Synchronized Queue Push/Pop   184.000 i/100ms
@@ -622,7 +622,7 @@ puts "Atomic Ruby Adaptive Thread Pool: #{adaptive_results[1].real.round(6)} sec
 
 ruby version:            ruby 4.0.7 (2026-09-15 revision 229531a6cf) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.8
-atomic-ruby version:     0.16.0
+atomic-ruby version:     0.16.1
 
 Fixed Pool Results:
 Concurrent Ruby Fixed Thread Pool: 5.147226 seconds
@@ -684,7 +684,7 @@ puts "Atomic Ruby Atomic Count Down Latch: #{results[1].total.round(6)} CPU seco
 
 ruby version:            ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +YJIT +PRISM [arm64-darwin23]
 concurrent-ruby version: 1.3.8
-atomic-ruby version:     0.16.0
+atomic-ruby version:     0.16.1
 
 Benchmark Results:
 Concurrent Ruby Count Down Latch:    0.000511 CPU seconds, 2.001465 elapsed seconds
